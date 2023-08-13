@@ -1,4 +1,4 @@
-module github.com/kevinjqiu/coredns-dockerdiscovery
+module github.com/karantin2020/coredns-dockerdns
 
 go 1.18
 
@@ -6,6 +6,7 @@ require (
 	github.com/coredns/caddy v1.1.1
 	github.com/coredns/coredns v1.10.1
 	github.com/fsouza/go-dockerclient v1.9.7
+	github.com/mhmtszr/concurrent-swiss-map v0.0.9
 	github.com/miekg/dns v1.1.54
 	github.com/stretchr/testify v1.8.2
 )

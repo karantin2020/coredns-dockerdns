@@ -1,18 +1,23 @@
 package dockerdiscovery
 
 import (
-	"strconv"
-
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
-
 	dockerapi "github.com/fsouza/go-dockerclient"
 
 	"github.com/coredns/caddy"
 )
 
-const defaultDockerEndpoint = "unix:///var/run/docker.sock"
-const defaultDockerDomain = "docker.local"
+const (
+	defaultDockerEndpoint = "unix:///var/run/docker.sock"
+	defaultDockerDomain   = "loc"
+	defaultTTL            = 3600
+	dockerHostLabel       = "coredns.dockerdns.host"
+	dockerNetworkLabel    = "coredns.dockerdns.network"
+	dockerEnableLabel     = "coredns.dockerdns.enable"
+	dockerProjectLabel    = "com.docker.compose.project"
+	dockerServiceLabel    = "com.docker.compose.service"
+)
 
 func init() {
 	caddy.RegisterPlugin("docker", caddy.Plugin{
@@ -21,88 +26,24 @@ func init() {
 	})
 }
 
-// TODO(kevinjqiu): add docker endpoint verification
 func createPlugin(c *caddy.Controller) (*DockerDiscovery, error) {
-	dd := NewDockerDiscovery(defaultDockerEndpoint)
-	labelResolver := &LabelResolver{hostLabel: "coredns.dockerdiscovery.host"}
-	dd.resolvers = append(dd.resolvers, labelResolver)
-
+	var (
+		dd  *DockerDiscovery
+		err error
+	)
+	i := 0
 	for c.Next() {
-		args := c.RemainingArgs()
-		if len(args) == 1 {
-			dd.dockerEndpoint = args[0]
+		if i > 0 {
+			return nil, plugin.ErrOnce
 		}
+		i++
 
-		if len(args) > 1 {
-			return dd, c.ArgErr()
+		dd, err = ParseStanza(c)
+		if err != nil {
+			return dd, err
 		}
-
-		for c.NextBlock() {
-			var value = c.Val()
-			switch value {
-			case "domain":
-				var resolver = &SubDomainContainerNameResolver{
-					domain: defaultDockerDomain,
-				}
-				dd.resolvers = append(dd.resolvers, resolver)
-				if !c.NextArg() {
-					return dd, c.ArgErr()
-				}
-				resolver.domain = c.Val()
-			case "hostname_domain":
-				var resolver = &SubDomainHostResolver{
-					domain: defaultDockerDomain,
-				}
-				dd.resolvers = append(dd.resolvers, resolver)
-				if !c.NextArg() {
-					return dd, c.ArgErr()
-				}
-				resolver.domain = c.Val()
-			case "compose_domain":
-				var resolver = &ComposeResolver{
-					domain: defaultDockerDomain,
-				}
-				dd.resolvers = append(dd.resolvers, resolver)
-				if !c.NextArg() {
-					return dd, c.ArgErr()
-				}
-				resolver.domain = c.Val()
-			case "network_aliases":
-				var resolver = &NetworkAliasesResolver{
-					network: "",
-				}
-				dd.resolvers = append(dd.resolvers, resolver)
-				if !c.NextArg() {
-					return dd, c.ArgErr()
-				}
-				resolver.network = c.Val()
-			case "label":
-				if !c.NextArg() {
-					return dd, c.ArgErr()
-				}
-				labelResolver.hostLabel = c.Val()
-			case "ttl":
-				if !c.NextArg() {
-					return dd, c.ArgErr()
-				}
-				ttl, err := strconv.ParseUint(c.Val(), 10, 32)
-				if err != nil {
-					return dd, err
-				}
-				if ttl > 0 {
-					dd.ttl = uint32(ttl)
-				}
-			default:
-				return dd, c.Errf("unknown property: '%s'", c.Val())
-			}
-		}
+		log.Debugf("[docker] Rzones: %#v", dd.rzones)
 	}
-	dockerClient, err := dockerapi.NewClient(dd.dockerEndpoint)
-	if err != nil {
-		return dd, err
-	}
-	dd.dockerClient = dockerClient
-	go dd.start()
 	return dd, nil
 }
 
@@ -111,6 +52,28 @@ func setup(c *caddy.Controller) error {
 	if err != nil {
 		return err
 	}
+
+	err = dd.scanContainers()
+	if err != nil {
+		return err
+	}
+
+	stopChan := make(chan struct{})
+	eventChan := make(chan *dockerapi.APIEvents)
+
+	if err := dd.dockerClient.AddEventListener(eventChan); err != nil {
+		log.Errorf("[docker] AddEventListener: %s", err)
+		return err
+	}
+
+	go dd.start(stopChan, eventChan)
+
+	c.OnShutdown(func() error {
+		close(stopChan)
+		close(eventChan)
+		log.Info("[docker] Stop event listening")
+		return nil
+	})
 
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
 		dd.Next = next

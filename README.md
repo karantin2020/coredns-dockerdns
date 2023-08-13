@@ -1,4 +1,4 @@
-coredns-dockerdiscovery
+coredns-dockerdns
 ===================================
 
 Docker discovery plugin for coredns
@@ -6,36 +6,54 @@ Docker discovery plugin for coredns
 Name
 ----
 
-dockerdiscovery - add/remove DNS records for docker containers.
+dockerdns - add/remove A/AAAA DNS records for docker containers.
 
 Syntax
 ------
 
-    docker [DOCKER_ENDPOINT] {
-        domain DOMAIN_NAME
-        hostname_domain HOSTNAME_DOMAIN_NAME
-        network_aliases DOCKER_NETWORK
-        label LABEL
-        compose_domain COMPOSE_DOMAIN_NAME
+    docker [ZONES...] {
+        endpoint DOCKER_ENDPOINT
+        by_domain
+        by_hostname
+        by_label
+        by_compose_domain
+        exposed_by_default
+        ttl TTL
+        from_networks NETWORKS...
     }
 
+* `ZONES`: zones to apply for plugin (i.e.: loc, docker.local)
 * `DOCKER_ENDPOINT`: the path to the docker socket. If unspecified, defaults to `unix:///var/run/docker.sock`. It can also be TCP socket, such as `tcp://127.0.0.1:999`.
-* `DOMAIN_NAME`: the name of the domain for [container name](https://docs.docker.com/engine/reference/run/#name---name), e.g. when `DOMAIN_NAME` is `docker.loc`, your container with `my-nginx` (as subdomain) [name](https://docs.docker.com/engine/reference/run/#name---name) will be assigned the domain name: `my-nginx.docker.loc`
-* `HOSTNAME_DOMAIN_NAME`: the name of the domain for [hostname](https://docs.docker.com/config/containers/container-networking/#ip-address-and-hostname). Work same as `DOMAIN_NAME` for hostname.
-* `COMPOSE_DOMAIN_NAME`: the name of the domain when it is determined the
-    container is managed by docker-compose.  e.g. for a compose project of
-    "internal" and service of "nginx", if `COMPOSE_DOMAIN_NAME` is
-    `compose.loc` the fqdn will be `nginx.internal.compose.loc`
-* `DOCKER_NETWORK`: the name of the docker network. Resolve directly by [network aliases](https://docs.docker.com/v17.09/engine/userguide/networking/configure-dns) (like internal docker dns resolve host by aliases whole network)
-* `LABEL`: container label of resolving host (by default enable and equals ```coredns.dockerdiscovery.host```)
+* `by_domain`: expose container in dns by container name. Default is `false`
+* `by_hostname`: expose container in dns by hostname. Default is `false`
+* `by_label`: expose container in dns by label. Default is `true`
+* `by_compose_domain`: expose container in dns by compose_domain. Default is `false`
+* `exposed_by_default`: default is `false`
+* `TTL`: change the DNS TTL (in seconds) of the records generated (forward and reverse). The default is 3600 seconds (1 hour).
+
+#### Docker containers can have labels:
+* `"coredns.dockernet.host"` - [string] specified container hostname 
+* `"coredns.dockernet.network"` - [string] container network to apply. This parameter overwrites `from_networks` rule. BE CAUTIOUS!
+* `"coredns.dockernet.enable"` - [true|false] enable specific container
+
+#### Apply next host resolve rules:
+* if `by_domain` == `true`:  
+    `container_name.zone`
+* if `by_hostname` == `true`:  
+    `hostname.zone`
+* if `by_label` == `true`:  
+    `host` (from label value, must have the same zone as plugin)
+* if `by_compose_domain` == `true`:  
+    `service.project.zone`
+
 
 How To Build
 ------------
 
     GO111MODULE=on go get -u github.com/coredns/coredns
-    GO111MODULE=on go get github.com/kevinjqiu/coredns-dockerdiscovery
+    GO111MODULE=on go get github.com/karantin2020/coredns-dockerdns
     cd ~/go/src/github.com/coredns/coredns
-    echo "docker:github.com/kevinjqiu/coredns-dockerdiscovery" >> plugin.cfg
+    echo "docker:github.com/karantin2020/coredns-dockerdns" >> plugin.cfg
     cat plugin.cfg | uniq > plugin.cfg.tmp
     mv plugin.cfg.tmp plugin.cfg
     make all
@@ -45,7 +63,7 @@ Alternatively, you can use the following manual steps:
 
 1. Checkout coredns:  `go get github.com/coredns/coredns`.
 2. `cd $GOPATH/src/github.com/coredns/coredns`
-3. `echo "docker:github.com/kevinjqiu/coredns-dockerdiscovery" >> plugin.cfg`
+3. `echo "docker:github.com/karantin2020/coredns-dockerdns" >> plugin.cfg`
 4. `go generate`
 5. `make`
 

@@ -2,92 +2,61 @@ package dockerdiscovery
 
 import (
 	"fmt"
+
 	dockerapi "github.com/fsouza/go-dockerclient"
-	"log"
+
 	"strings"
+
+	"github.com/coredns/coredns/plugin"
 )
 
 func normalizeContainerName(container *dockerapi.Container) string {
 	return strings.TrimLeft(container.Name, "/")
 }
 
-// resolvers implements ContainerDomainResolver
+func (dd *DockerDiscovery) makeFQDNs(domains []string) []string {
+	// make new host list: domain + zone from coredns block args
+	// examples:
+	// 1:
+	// domains == ["one", "two"]
+	// rzones == [".loc", ".docker.local"]
+	// results are: ["one.loc", "one.docker.local", "two.loc", "two.docker.local"]
+	// 2:
+	// domains == ["one", "two"]
+	// rzones == [""]
+	// results are: ["one", "two"]
+	// Note: FQDN always has trailing dot
+	set := map[string]struct{}{}
+	// if len(dd.rzones) == 0 {
+	// 	return nil, fmt.Errorf("empty rzones list")
+	// }
+	dl := make([]string, 0, len(domains)*len(dd.rzones))
+	for j := range domains {
+		for k := range dd.rzones {
+			name := domains[j] + dd.rzones[k]
+			if name == "" {
+				continue
+			}
+			name, err := dd.toFQDN(name)
+			if err != nil {
+				log.Errorf("[docker]  %s", err)
+				continue
+			}
+			if _, ok := set[name]; ok {
+				continue
+			}
+			dl = append(dl, name)
+			set[name] = struct{}{}
 
-type SubDomainContainerNameResolver struct {
-	domain string
-}
-
-func (resolver SubDomainContainerNameResolver) resolve(container *dockerapi.Container) ([]string, error) {
-	var domains []string
-	domains = append(domains, fmt.Sprintf("%s.%s", normalizeContainerName(container), resolver.domain))
-	return domains, nil
-}
-
-type SubDomainHostResolver struct {
-	domain string
-}
-
-func (resolver SubDomainHostResolver) resolve(container *dockerapi.Container) ([]string, error) {
-	var domains []string
-	domains = append(domains, fmt.Sprintf("%s.%s", container.Config.Hostname, resolver.domain))
-	return domains, nil
-}
-
-type LabelResolver struct {
-	hostLabel string
-}
-
-func (resolver LabelResolver) resolve(container *dockerapi.Container) ([]string, error) {
-	var domains []string
-
-	for label, value := range container.Config.Labels {
-		if label == resolver.hostLabel {
-			domains = append(domains, value)
-			break
 		}
 	}
-
-	return domains, nil
+	return dl
 }
 
-// ComposeResolver sets names based on compose labels
-type ComposeResolver struct {
-	domain string
-}
-
-func (resolver ComposeResolver) resolve(container *dockerapi.Container) ([]string, error) {
-	var domains []string
-
-	project, pok := container.Config.Labels["com.docker.compose.project"]
-	service, sok := container.Config.Labels["com.docker.compose.service"]
-	if !pok || !sok {
-		return domains, nil
+func (dd *DockerDiscovery) toFQDN(name string) (string, error) {
+	name = plugin.Name(name).Normalize()
+	if plugin.Zones(dd.Origins).Matches(name) == "" {
+		return "", fmt.Errorf("name %s is not in Origins", name)
 	}
-
-	domain := fmt.Sprintf("%s.%s.%s", service, project, resolver.domain)
-	domains = append(domains, domain)
-
-	log.Printf("[docker] Found compose domain for container %s: %s", container.ID[:12], domain)
-	return domains, nil
-}
-
-type NetworkAliasesResolver struct {
-	network string
-}
-
-func (resolver NetworkAliasesResolver) resolve(container *dockerapi.Container) ([]string, error) {
-	var domains []string
-
-	if resolver.network != "" {
-		network, ok := container.NetworkSettings.Networks[resolver.network]
-		if ok {
-			domains = append(domains, network.Aliases...)
-		}
-	} else {
-		for _, network := range container.NetworkSettings.Networks {
-			domains = append(domains, network.Aliases...)
-		}
-	}
-
-	return domains, nil
+	return name, nil
 }

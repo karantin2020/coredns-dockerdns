@@ -2,101 +2,97 @@ package dockerdiscovery
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log"
+
 	"net"
 	"strings"
-	"sync"
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/request"
 	dockerapi "github.com/fsouza/go-dockerclient"
+	csm "github.com/mhmtszr/concurrent-swiss-map"
 	"github.com/miekg/dns"
 )
-
-type ContainerInfo struct {
-	container *dockerapi.Container
-	address   net.IP
-	address6  net.IP
-	domains   []string // resolved domain
-}
-
-type ContainerInfoMap map[string]*ContainerInfo
-
-type ContainerDomainResolver interface {
-	// return domains without trailing dot
-	resolve(container *dockerapi.Container) ([]string, error)
-}
 
 // DockerDiscovery is a plugin that conforms to the coredns plugin interface
 type DockerDiscovery struct {
 	Next           plugin.Handler
+	Origins        []string
 	dockerEndpoint string
-	resolvers      []ContainerDomainResolver
 	dockerClient   *dockerapi.Client
+	ttl            uint32
+	opts           dnsControlOpts
 
-	mutex            sync.RWMutex
-	containerInfoMap ContainerInfoMap
-	ttl              uint32
+	// mutex            sync.RWMutex
+	// containerInfoMap ContainerInfoMap
+	hmap   *Map
+	rzones []string
+}
+
+type dnsControlOpts struct {
+	byDomain         bool
+	byHostname       bool
+	byLabel          bool
+	byComposeDomain  bool
+	exposedByDefault bool
+	fromNetworks     []string
 }
 
 // NewDockerDiscovery constructs a new DockerDiscovery object
 func NewDockerDiscovery(dockerEndpoint string) *DockerDiscovery {
+	if dockerEndpoint == "" {
+		dockerEndpoint = defaultDockerEndpoint
+	}
 	return &DockerDiscovery{
-		dockerEndpoint:   dockerEndpoint,
-		containerInfoMap: make(ContainerInfoMap),
-		ttl:              3600,
+		Origins:        make([]string, 0, 10),
+		rzones:         make([]string, 0, 10),
+		dockerEndpoint: dockerEndpoint,
+		ttl:            defaultTTL,
+		hmap: &Map{
+			name4: newCSMap(),
+			name6: newCSMap(),
+			ids: csm.Create[string, *ContainerData](
+				csm.WithShardCount[string, *ContainerData](32),
+				csm.WithSize[string, *ContainerData](100),
+			),
+		},
+		opts: dnsControlOpts{
+			byLabel: true,
+		},
 	}
-}
-
-func (dd *DockerDiscovery) resolveDomainsByContainer(container *dockerapi.Container) ([]string, error) {
-	var domains []string
-	for _, resolver := range dd.resolvers {
-		var d, err = resolver.resolve(container)
-		if err != nil {
-			log.Printf("[docker] Error resolving container domains %s", err)
-		}
-		domains = append(domains, d...)
-	}
-
-	return domains, nil
-}
-
-func (dd *DockerDiscovery) containerInfoByDomain(requestName string) (*ContainerInfo, error) {
-	dd.mutex.RLock()
-	defer dd.mutex.RUnlock()
-
-	for _, containerInfo := range dd.containerInfoMap {
-		for _, d := range containerInfo.domains {
-			if fmt.Sprintf("%s.", d) == requestName { // qualified domain name must be specified with a trailing dot
-				return containerInfo, nil
-			}
-		}
-	}
-
-	return nil, nil
 }
 
 // ServeDNS implements plugin.Handler
 func (dd *DockerDiscovery) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
+	qname := state.Name()
+	log.Debugf("docker] Requested qname: %s", qname)
+	zone := plugin.Zones(dd.Origins).Matches(qname)
+	if zone == "" {
+		// PTR zones don't need to be specified in Origins.
+		if state.QType() != dns.TypePTR {
+			// if this doesn't match we need to fall through regardless of h.Fallthrough
+			return plugin.NextOrFailure(dd.Name(), dd.Next, ctx, w, r)
+		}
+	}
 	var answers []dns.RR
 	switch state.QType() {
 	case dns.TypeA:
-		containerInfo, _ := dd.containerInfoByDomain(state.QName())
-		if containerInfo != nil {
-			answers = getAnswer(state.Name(), []net.IP{containerInfo.address}, dd.ttl, false)
+		ips, ok := dd.hmap.name4.Load(state.QName())
+		if ok {
+			log.Debugf("docker] Found ipv4 for qname: %s", qname)
+			answers = a(qname, dd.ttl, ips)
 		}
 	case dns.TypeAAAA:
-		containerInfo, _ := dd.containerInfoByDomain(state.QName())
-		if containerInfo != nil && containerInfo.address6 != nil {
-			answers = getAnswer(state.Name(), []net.IP{containerInfo.address6}, dd.ttl, true)
+		ips, ok := dd.hmap.name6.Load(state.QName())
+		if ok {
+			log.Debugf("docker] Found ipv6 for qname: %s", qname)
+			answers = aaaa(qname, dd.ttl, ips)
 		}
 	}
 
 	if len(answers) == 0 {
-		return plugin.NextOrFailure(dd.Name(), dd.Next, ctx, w, r)
+		return dns.RcodeServerFailure, nil
 	}
 
 	m := new(dns.Msg)
@@ -108,7 +104,7 @@ func (dd *DockerDiscovery) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	m = state.Scrub(m)
 	err := w.WriteMsg(m)
 	if err != nil {
-		log.Printf("[docker] Error: %s", err.Error())
+		log.Errorf("[docker]  %s", err.Error())
 	}
 	return dns.RcodeSuccess, nil
 }
@@ -118,37 +114,115 @@ func (dd *DockerDiscovery) Name() string {
 	return "docker"
 }
 
-func (dd *DockerDiscovery) getContainerAddress(container *dockerapi.Container, v6 bool) (net.IP, error) {
+func (dd *DockerDiscovery) scanContainers() error {
+	containers, err := dd.dockerClient.ListContainers(dockerapi.ListContainersOptions{})
+	if err != nil {
+		log.Errorf("[docker] ListContainers: %s", err)
+		return err
+	}
 
+	for _, apiContainer := range containers {
+		container, err := dd.dockerClient.InspectContainerWithOptions(dockerapi.InspectContainerOptions{ID: apiContainer.ID})
+		if err != nil {
+			log.Errorf("[docker] Inspect container %s: %s", container.ID[:12], err)
+		}
+		if err := dd.updateContainer(container); err != nil {
+			log.Errorf("[docker] Adding A/AAAA records for container %s: %s", container.ID[:12], err)
+		}
+	}
+	return nil
+}
+
+func (dd *DockerDiscovery) start(stopChan chan struct{}, events chan *dockerapi.APIEvents) {
+	log.Info("[docker] Start event listening")
+	for {
+		select {
+		case <-stopChan:
+			return
+		case msg := <-events:
+			go func(msg *dockerapi.APIEvents) {
+				event := fmt.Sprintf("%s:%s", msg.Type, msg.Action)
+				switch event {
+				case "container:start":
+
+					container, err := dd.dockerClient.InspectContainerWithOptions(dockerapi.InspectContainerOptions{ID: msg.Actor.ID})
+					if err != nil {
+						log.Errorf("[docker] Event error %s #%s: %s", event, msg.Actor.ID[:12], err)
+						return
+					}
+					log.Infof("[docker] New container %s spawned. Attempt to add A/AAAA records for it", container.ID[:12])
+					if err := dd.updateContainer(container); err != nil {
+						log.Errorf("[docker] Update container %s: %s", container.ID[:12], err)
+					}
+				case "container:die":
+					log.Infof("[docker] Container %s stopped. Attempt to remove its A/AAAA records from the DNS", msg.Actor.ID[:12])
+					if err := dd.removeContainer(msg.Actor.ID); err != nil {
+						log.Errorf("[docker] Deleting A/AAAA records for container: %s: %s", msg.Actor.ID[:12], err)
+					}
+				case "network:connect":
+					// take a look https://gist.github.com/josefkarasek/be9bac36921f7bc9a61df23451594fbf for example of same event's types attributes
+					log.Infof("[docker] Container %s connected to network %s.", msg.Actor.Attributes["container"][:12], msg.Actor.Attributes["name"])
+
+					container, err := dd.dockerClient.InspectContainerWithOptions(dockerapi.InspectContainerOptions{ID: msg.Actor.Attributes["container"]})
+					if err != nil {
+						log.Errorf("[docker] Event error %s #%s: %s", event, msg.Actor.Attributes["container"][:12], err)
+						return
+					}
+					if err := dd.updateContainerNetworks(container); err != nil {
+						log.Errorf("[docker] Update container %s: %s", container.ID[:12], err)
+					}
+				case "network:disconnect":
+					log.Infof("[docker] Container %s disconnected from network %s", msg.Actor.Attributes["container"][:12], msg.Actor.Attributes["name"])
+
+					container, err := dd.dockerClient.InspectContainerWithOptions(dockerapi.InspectContainerOptions{ID: msg.Actor.Attributes["container"]})
+					if err != nil {
+						log.Errorf("[docker] Event error %s #%s: %s", event, msg.Actor.Attributes["container"][:12], err)
+						return
+					}
+					if err := dd.updateContainerNetworks(container); err != nil {
+						log.Errorf("[docker] Update container %s: %s", container.ID[:12], err)
+					}
+				}
+			}(msg)
+		}
+	}
+}
+
+// get ipv4 and ipv6 addresses for container.
+func (dd *DockerDiscovery) getContainerAddresses(container *dockerapi.Container) (ipv4, ipv6 []net.IP, err error) {
 	// save this away
-	netName, hasNetName := container.Config.Labels["coredns.dockerdiscovery.network"]
+	netName, hasNetName := container.Config.Labels[dockerNetworkLabel]
 
 	var networkMode string
 
 	for {
-		if container.NetworkSettings.IPAddress != "" && !hasNetName && !v6 {
-			return net.ParseIP(container.NetworkSettings.IPAddress), nil
+		if container.NetworkSettings.IPAddress != "" && !hasNetName {
+			ipv4i := net.ParseIP(container.NetworkSettings.IPAddress)
+			if ipv4i != nil {
+				log.Debugf("[docker] Container %s has IP %s", container.ID[:12], ipv4i)
+				ipv4 = append(ipv4, ipv4i)
+			}
 		}
 
-		if container.NetworkSettings.GlobalIPv6Address != "" && !hasNetName && v6 {
-			return net.ParseIP(container.NetworkSettings.GlobalIPv6Address), nil
+		if container.NetworkSettings.GlobalIPv6Address != "" && !hasNetName {
+			ipv6i := net.ParseIP(container.NetworkSettings.GlobalIPv6Address)
+			if ipv6i != nil {
+				ipv6 = append(ipv6, ipv6i)
+			}
 		}
 
 		networkMode = container.HostConfig.NetworkMode
 
-		// TODO: Deal with containers run with host ip (--net=host)
 		if networkMode == "host" {
-			log.Println("[docker] Container uses host network")
-			return nil, nil
+			log.Infof("[docker] Container %s uses host network", container.ID[:12])
 		}
 
 		if strings.HasPrefix(networkMode, "container:") {
-			log.Printf("Container %s is in another container's network namspace", container.ID[:12])
+			log.Infof("Container %s is in another container's network namespace", container.ID[:12])
 			otherID := container.HostConfig.NetworkMode[len("container:"):]
-			var err error
 			container, err = dd.dockerClient.InspectContainerWithOptions(dockerapi.InspectContainerOptions{ID: otherID})
 			if err != nil {
-				return nil, err
+				return
 			}
 		} else {
 			break
@@ -161,175 +235,97 @@ func (dd *DockerDiscovery) getContainerAddress(container *dockerapi.Container, v
 	)
 
 	if hasNetName {
-		log.Printf("[docker] network name %s specified (%s)", netName, container.ID[:12])
+		log.Infof("[docker] network name %s specified (%s)", netName, container.ID[:12])
 		network, ok = container.NetworkSettings.Networks[netName]
-	} else if len(container.NetworkSettings.Networks) == 1 {
+		if ok {
+			addressesFromNetwork(network, &ipv4, &ipv6)
+		}
+	} else {
 		for netName, network = range container.NetworkSettings.Networks {
+			if !dd.permittedNetwork(netName) {
+				continue
+			}
+			log.Infof("[docker] Add network %s for container %s", netName, container.ID[:12])
+			addressesFromNetwork(network, &ipv4, &ipv6)
 			ok = true
 		}
 	}
 
 	if !ok { // sometime while "network:disconnect" event fire
-		return nil, fmt.Errorf("unable to find network settings for the network %s", networkMode)
+		err = fmt.Errorf("unable to find network settings for container %s", container.ID[:12])
+		return
 	}
 
-	if !v6 {
-		return net.ParseIP(network.IPAddress), nil // ParseIP return nil when IPAddress equals ""
-	} else if v6 && len(network.GlobalIPv6Address) > 0 {
-		return net.ParseIP(network.GlobalIPv6Address), nil
-	}
-
-	return nil, nil
+	return
 }
 
-func (dd *DockerDiscovery) updateContainerInfo(container *dockerapi.Container) error {
-	dd.mutex.Lock()
-	defer dd.mutex.Unlock()
-
-	_, isExist := dd.containerInfoMap[container.ID]
-	if isExist { // remove previous resolved container info
-		delete(dd.containerInfoMap, container.ID)
+func addressesFromNetwork(network dockerapi.ContainerNetwork, ipv4 *[]net.IP, ipv6 *[]net.IP) {
+	if len(network.IPAddress) > 0 {
+		ipv4i := net.ParseIP(network.IPAddress) // ParseIP return nil when IPAddress equals ""
+		if ipv4i != nil {
+			log.Debugf("[docker] Container has IP %s", ipv4i)
+			*ipv4 = append(*ipv4, ipv4i)
+		}
 	}
+	if len(network.GlobalIPv6Address) > 0 {
+		ipv6i := net.ParseIP(network.GlobalIPv6Address)
+		if ipv6i != nil {
+			*ipv6 = append(*ipv6, ipv6i)
+		}
+	}
+	return
+}
 
-	containerAddress, err := dd.getContainerAddress(container, false)
-	if err != nil || containerAddress == nil {
-		log.Printf("[docker] Remove container entry %s (%s)", normalizeContainerName(container), container.ID[:12])
+func (dd *DockerDiscovery) updateContainer(container *dockerapi.Container) error {
+	c, err := dd.parseContainer(container)
+	if err != nil {
+		// log.Errorf("[docker] Parsing container %s: %s", container.ID[:12], err)
+		if dd.hmap.ids.Has(c.id) {
+			log.Infof("[docker] Remove container entry %s (%s)",
+				normalizeContainerName(container), container.ID[:12])
+			dd.hmap.removeContainer(c.id)
+		}
 		return err
 	}
-
-	containerAddress6, err := dd.getContainerAddress(container, true)
-
-	domains, _ := dd.resolveDomainsByContainer(container)
-	if len(domains) > 0 {
-		dd.containerInfoMap[container.ID] = &ContainerInfo{
-			container: container,
-			address:   containerAddress,
-			address6:  containerAddress6,
-			domains:   domains,
-		}
-
-		if !isExist {
-			log.Printf("[docker] Add entry of container %s (%s). IP: %v", normalizeContainerName(container), container.ID[:12], containerAddress)
-		}
-	} else if isExist {
-		log.Printf("[docker] Remove container entry %s (%s)", normalizeContainerName(container), container.ID[:12])
-	}
-	return nil
-}
-
-func (dd *DockerDiscovery) removeContainerInfo(containerID string) error {
-	dd.mutex.Lock()
-	defer dd.mutex.Unlock()
-
-	containerInfo, ok := dd.containerInfoMap[containerID]
-	if !ok {
-		log.Printf("[docker] No entry associated with the container %s", containerID[:12])
+	if !dd.opts.exposedByDefault && !c.enabled && c.labeledHost == "" {
+		log.Infof("[docker] Skip container %s: disabled discovery", container.ID[:12])
 		return nil
 	}
-	log.Printf("[docker] Deleting entry %s (%s)", normalizeContainerName(containerInfo.container), containerInfo.container.ID[:12])
-	delete(dd.containerInfoMap, containerID)
 
+	log.Infof("[docker] Add entry of container %s (%s). IP: %v. Hosts: %v",
+		normalizeContainerName(container), container.ID[:12], c.ipv4, c.hosts)
+	dd.hmap.addContainer(c)
 	return nil
 }
 
-func (dd *DockerDiscovery) start() error {
-	log.Println("[docker] start")
-	events := make(chan *dockerapi.APIEvents)
-
-	if err := dd.dockerClient.AddEventListener(events); err != nil {
-		return err
+func (dd *DockerDiscovery) removeContainer(containerID string) error {
+	cd, ok := dd.hmap.ids.Load(containerID)
+	if !ok {
+		log.Errorf("[docker] No entry associated with the container %s", containerID[:12])
+		return nil
 	}
-
-	containers, err := dd.dockerClient.ListContainers(dockerapi.ListContainersOptions{})
-	if err != nil {
-		return err
-	}
-
-	for _, apiContainer := range containers {
-		container, err := dd.dockerClient.InspectContainerWithOptions(dockerapi.InspectContainerOptions{ID: apiContainer.ID})
-		if err != nil {
-			// TODO err
-		}
-		if err := dd.updateContainerInfo(container); err != nil {
-			log.Printf("[docker] Error adding A/AAAA records for container %s: %s\n", container.ID[:12], err)
-		}
-	}
-
-	for msg := range events {
-		go func(msg *dockerapi.APIEvents) {
-			event := fmt.Sprintf("%s:%s", msg.Type, msg.Action)
-			switch event {
-			case "container:start":
-				log.Println("[docker] New container spawned. Attempt to add A/AAAA records for it")
-
-				container, err := dd.dockerClient.InspectContainerWithOptions(dockerapi.InspectContainerOptions{ID: msg.Actor.ID})
-				if err != nil {
-					log.Printf("[docker] Event error %s #%s: %s", event, msg.Actor.ID[:12], err)
-					return
-				}
-				if err := dd.updateContainerInfo(container); err != nil {
-					log.Printf("[docker] Error adding A/AAAA records for container %s: %s", container.ID[:12], err)
-				}
-			case "container:die":
-				log.Println("[docker] Container being stopped. Attempt to remove its A/AAAA records from the DNS", msg.Actor.ID[:12])
-				if err := dd.removeContainerInfo(msg.Actor.ID); err != nil {
-					log.Printf("[docker] Error deleting A/AAAA records for container: %s: %s", msg.Actor.ID[:12], err)
-				}
-			case "network:connect":
-				// take a look https://gist.github.com/josefkarasek/be9bac36921f7bc9a61df23451594fbf for example of same event's types attributes
-				log.Printf("[docker] Container %s being connected to network %s.", msg.Actor.Attributes["container"][:12], msg.Actor.Attributes["name"])
-
-				container, err := dd.dockerClient.InspectContainerWithOptions(dockerapi.InspectContainerOptions{ID: msg.Actor.Attributes["container"]})
-				if err != nil {
-					log.Printf("[docker] Event error %s #%s: %s", event, msg.Actor.Attributes["container"][:12], err)
-					return
-				}
-				if err := dd.updateContainerInfo(container); err != nil {
-					log.Printf("[docker] Error adding A/AAAA records for container %s: %s", container.ID[:12], err)
-				}
-			case "network:disconnect":
-				log.Printf("[docker] Container %s being disconnected from network %s", msg.Actor.Attributes["container"][:12], msg.Actor.Attributes["name"])
-
-				container, err := dd.dockerClient.InspectContainerWithOptions(dockerapi.InspectContainerOptions{ID: msg.Actor.Attributes["container"]})
-				if err != nil {
-					log.Printf("[docker] Event error %s #%s: %s", event, msg.Actor.Attributes["container"][:12], err)
-					return
-				}
-				if err := dd.updateContainerInfo(container); err != nil {
-					log.Printf("[docker] Error adding A/AAAA records for container %s: %s", container.ID[:12], err)
-				}
-			}
-		}(msg)
-	}
-
-	return errors.New("docker event loop closed")
+	log.Infof("[docker] Delete entry %s (%s)", cd.name, cd.id[:12])
+	dd.hmap.removeContainer(containerID)
+	return nil
 }
 
-// getAnswer function takes a slice of net.IPs and returns a slice of A/AAAA RRs.
-func getAnswer(zone string, ips []net.IP, ttl uint32, v6 bool) []dns.RR {
-	answers := []dns.RR{}
-	for _, ip := range ips {
-		if !v6 {
-			record := new(dns.A)
-			record.Hdr = dns.RR_Header{
-				Name:   zone,
-				Rrtype: dns.TypeA,
-				Class:  dns.ClassINET,
-				Ttl:    ttl,
-			}
-			record.A = ip
-			answers = append(answers, record)
-		} else if v6 {
-			record := new(dns.AAAA)
-			record.Hdr = dns.RR_Header{
-				Name:   zone,
-				Rrtype: dns.TypeAAAA,
-				Class:  dns.ClassINET,
-				Ttl:    ttl,
-			}
-			record.AAAA = ip
-			answers = append(answers, record)
-		}
+func (dd *DockerDiscovery) updateContainerNetworks(container *dockerapi.Container) error {
+	c, ok := dd.hmap.ids.Load(container.ID)
+	if !ok {
+		log.Infof("[docker] No entry associated with the container %s", container.ID[:12])
+		return nil
 	}
-	return answers
+	ipv4, ipv6, err := dd.getContainerAddresses(container)
+	if err != nil {
+		log.Errorf("[docker] Get container %s addresses: %s", c.id[:12], err)
+		return err
+	}
+	if len(ipv4) == 0 {
+		err = fmt.Errorf("no ipv4 address for container %s found", container.ID[:12])
+		log.Errorf("[docker] Get container %s: %s", c.id[:12], err)
+	}
+	c.ipv4 = ipv4
+	c.ipv6 = ipv6
+	dd.hmap.addContainer(c)
+	return nil
 }
