@@ -1,4 +1,4 @@
-coredns-dockerdns
+## coredns-dockerdns [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][go-report-img]][go-report]
 ===================================
 
 Docker discovery plugin for coredns
