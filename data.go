@@ -53,7 +53,7 @@ func (dd *DockerDiscovery) parseContainer(container *dockerapi.Container) (*Cont
 	c := newContainerConfig(container)
 	networks := []string{}
 	for name := range container.NetworkSettings.Networks {
-		if !dd.permittedNetwork(name) {
+		if !dd.permittedNetwork(name, c.labeledNetwork) {
 			continue
 		}
 		networks = append(networks, name)
@@ -118,12 +118,12 @@ func (dd *DockerDiscovery) addFQDN(name string, c *ContainerData) error {
 	return nil
 }
 
-func (dd *DockerDiscovery) permittedNetwork(network string) bool {
+func (dd *DockerDiscovery) permittedNetwork(network, labeledNetwork string) bool {
 	if len(dd.opts.fromNetworks) == 0 {
 		return true
 	}
 	for _, n := range dd.opts.fromNetworks {
-		if n == network {
+		if n == network || (labeledNetwork != "" && n == labeledNetwork) {
 			return true
 		}
 	}

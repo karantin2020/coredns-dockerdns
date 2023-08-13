@@ -191,7 +191,7 @@ func (dd *DockerDiscovery) start(stopChan chan struct{}, events chan *dockerapi.
 // get ipv4 and ipv6 addresses for container.
 func (dd *DockerDiscovery) getContainerAddresses(container *dockerapi.Container) (ipv4, ipv6 []net.IP, err error) {
 	// save this away
-	netName, hasNetName := container.Config.Labels[dockerNetworkLabel]
+	labeledNetwork, hasNetName := container.Config.Labels[dockerNetworkLabel]
 
 	var networkMode string
 
@@ -235,14 +235,14 @@ func (dd *DockerDiscovery) getContainerAddresses(container *dockerapi.Container)
 	)
 
 	if hasNetName {
-		log.Infof("[docker] network name %s specified (%s)", netName, container.ID[:12])
-		network, ok = container.NetworkSettings.Networks[netName]
+		log.Infof("[docker] Network name %s specified (%s)", labeledNetwork, container.ID[:12])
+		network, ok = container.NetworkSettings.Networks[labeledNetwork]
 		if ok {
 			addressesFromNetwork(network, &ipv4, &ipv6)
 		}
 	} else {
-		for netName, network = range container.NetworkSettings.Networks {
-			if !dd.permittedNetwork(netName) {
+		for netName, network := range container.NetworkSettings.Networks {
+			if !dd.permittedNetwork(netName, labeledNetwork) {
 				continue
 			}
 			log.Infof("[docker] Add network %s for container %s", netName, container.ID[:12])
@@ -279,7 +279,7 @@ func addressesFromNetwork(network dockerapi.ContainerNetwork, ipv4 *[]net.IP, ip
 func (dd *DockerDiscovery) updateContainer(container *dockerapi.Container) error {
 	c, err := dd.parseContainer(container)
 	if err != nil {
-		// log.Errorf("[docker] Parsing container %s: %s", container.ID[:12], err)
+		log.Debugf("[docker] Parsing container %s: %s", container.ID[:12], err)
 		if dd.hmap.ids.Has(c.id) {
 			log.Infof("[docker] Remove container entry %s (%s)",
 				normalizeContainerName(container), container.ID[:12])

@@ -1,6 +1,4 @@
-## coredns-dockerdns [![GoDoc][doc-img]][doc]  
-  
-[![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][go-report-img]][go-report]
+## coredns-dockerdns  [![GoDoc][doc-img]][doc] [![Go Report Card][go-report-img]][go-report]
 ===================================
 
 Docker discovery plugin for coredns
@@ -28,7 +26,7 @@ Syntax
 * `DOCKER_ENDPOINT`: the path to the docker socket. If unspecified, defaults to `unix:///var/run/docker.sock`. It can also be TCP socket, such as `tcp://127.0.0.1:999`.
 * `by_domain`: expose container in dns by container name. Default is `false`
 * `by_hostname`: expose container in dns by hostname. Default is `false`
-* `by_label`: expose container in dns by label. Default is `true`
+* `by_label`: expose container in dns by label. Default is `true`, so it is of no use. This directive is always `true`
 * `by_compose_domain`: expose container in dns by compose_domain. Default is `false`
 * `exposed_by_default`: default is `false`
 * `TTL`: change the DNS TTL (in seconds) of the records generated (forward and reverse). The default is 3600 seconds (1 hour).
@@ -48,6 +46,42 @@ Syntax
 * if `by_compose_domain` == `true`:  
     `service.project.zone`
 
+It is recommended to define docker block in separate Corefile block
+
+    # works incorrect 
+    . {
+        reload 10s
+        hosts {
+            172.28.0.4  whoami.gat
+            172.28.0.4  whoami.nit
+            fallthrough
+        }
+        docker docker.loc {
+            by_domain
+            by_hostname
+            by_compose_domain
+        }
+        forward . 1.1.1.1 8.8.8.8
+        errors
+    }
+
+    # works correct
+    loc:15353 groc:15353 {
+        reload 10s
+        docker {
+            by_domain
+            by_hostname
+            by_compose_domain
+        }
+        errors
+    }
+
+    # works correct too
+    moc:15353 {
+        reload 10s
+        docker 
+        errors
+    }
 
 How To Build
 ------------
