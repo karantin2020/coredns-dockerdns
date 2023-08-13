@@ -144,3 +144,13 @@ Container will be resolved by label as ```nginx.loc```
 
 
  See receipt [how install for local development](setup.md)
+
+
+[doc-img]: https://godoc.org/github.com/karantin2020/coredns-dockerdns?status.svg
+[doc]: https://godoc.org/github.com/karantin2020/coredns-dockerdns
+[ci-img]: https://github.com/karantin2020/coredns-dockerdns/actions/workflows/build-test.yml/badge.svg
+[ci]: https://github.com/karantin2020/coredns-dockerdns/actions/workflows/build-test.yml
+[cov-img]: https://codecov.io/gh/karantin2020/coredns-dockerdns/branch/master/graph/badge.svg
+[cov]: https://codecov.io/gh/karantin2020/coredns-dockerdns
+[go-report-img]: https://goreportcard.com/badge/github.com/karantin2020/coredns-dockerdns
+[go-report]: https://goreportcard.com/report/github.com/karantin2020/coredns-dockerdns
