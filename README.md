@@ -1,4 +1,6 @@
-## coredns-dockerdns [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][go-report-img]][go-report]
+## coredns-dockerdns [![GoDoc][doc-img]][doc]  
+  
+[![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][go-report-img]][go-report]
 ===================================
 
 Docker discovery plugin for coredns
@@ -69,8 +71,8 @@ Alternatively, you can use the following manual steps:
 
 Alternatively, run insider docker container
 
-    docker build -t coredns-dockerdiscovery .
-    docker run --rm -v ${PWD}/Corefile:/etc/Corefile -v /var/run/docker.sock:/var/run/docker.sock -p 15353:15353/udp coredns-dockerdiscovery -conf /etc/Corefile
+    docker build -t coredns-dockerdns .
+    docker run --rm -v ${PWD}/Corefile:/etc/Corefile -v /var/run/docker.sock:/var/run/docker.sock -p 15353:15353/udp coredns-dockerdns -conf /etc/Corefile
 
 Run tests
 
@@ -81,32 +83,43 @@ Example
 
 `Corefile`:
 
-    .:15353 {
-        docker unix:///var/run/docker.sock {
-            domain docker.loc
-            hostname_domain docker-host.loc
+    loc:15353 groc:15353 {
+        reload 10s
+        docker {
+            by_domain
+            by_hostname
+            by_compose_domain
         }
-        log
+        errors
+    }
+
+    moc:15353 {
+        reload 10s
+        docker a.moc b.moc {
+            by_domain
+            by_hostname
+            by_compose_domain
+        }
+        errors
     }
 
 Start CoreDNS:
 
     $ ./coredns
 
-    .:15353
-    2018/04/26 22:36:32 [docker] start
-    2018/04/26 22:36:32 [INFO] CoreDNS-1.1.1
-    2018/04/26 22:36:32 [INFO] linux/amd64, go1.10.1,
-    CoreDNS-1.1.1
+    groc.:15353
+    loc.:15353
+    moc.:15353         
+    CoreDNS-1.11.0
 
 Start a docker container:
 
     $ docker run -d --name my-alpine --hostname alpine alpine sleep 1000
     78c2a06ef2a9b63df857b7985468f7310bba0d9ea4d0d2629343aff4fd171861
 
-Use CoreDNS as your resolver to resolve the `my-alpine.docker.loc` or `alpine.docker-host.loc`:
+Use CoreDNS as your resolver to resolve the `my-alpine.loc` or `alpine.moc`, `alpine.groc`, `alpine.a.moc`, `alpine.b.moc`:
 
-    $ dig @localhost -p 15353 my-alpine.docker.loc
+    $ dig @localhost -p 15353 my-alpine.loc
 
     ; <<>> DiG 9.10.3-P4-Ubuntu <<>> @localhost -p 15353 my-alpine.docker.loc
     ; (1 server found)
@@ -133,14 +146,14 @@ Stop the docker container will remove the corresponded DNS entries:
     $ docker stop my-alpine
     78c2a
 
-    $ dig @localhost -p 15353 my-alpine.docker.loc
+    $ dig @localhost -p 15353 my-alpine.loc
 
     ;; QUESTION SECTION:
     ;my-alpine.docker.loc.            IN      A
 
 Container will be resolved by label as ```nginx.loc```
 
-    docker run --label=coredns.dockerdiscovery.host=nginx.loc nginx
+    docker run --label=coredns.dockerdns.host=nginx.loc nginx
 
 
  See receipt [how install for local development](setup.md)

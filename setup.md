@@ -3,13 +3,27 @@ Install for local development
 
 Create `Corefile`
     
-    loc:53 {
-        docker unix:///var/run/docker.sock {
-            domain docker.loc
+    loc:15353 groc:15353 {
+        reload 10s
+        docker {
+            by_domain
+            by_hostname
+            by_compose_domain
         }
-        cache 20
-        log
+        errors
     }
+
+    moc:15353 {
+        reload 10s
+        docker a.moc b.moc {
+            by_domain
+            by_hostname
+            by_compose_domain
+        }
+        errors
+    }
+
+### TODO: fix this manual
 
 Run coredns in alpine container with assigned static ip. Specify any network is required.
 `${PWD}/coredns` path to executed coredns file. See `How To Build` section in [README.md](README.md)
