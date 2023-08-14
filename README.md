@@ -1,5 +1,5 @@
 ## coredns-dockerdns  [![GoDoc][doc-img]][doc] [![Go Report Card][go-report-img]][go-report]
-===================================
+
 
 Docker discovery plugin for coredns
 
@@ -17,9 +17,11 @@ Syntax
         by_hostname
         by_label
         by_compose_domain
-        exposed_by_default
+        enabled_by_default
         ttl TTL
         from_networks NETWORKS...
+        no_reverse
+        fallthrough [ZONES...]
     }
 
 * `ZONES`: zones to apply for plugin (i.e.: loc, docker.local)
@@ -28,8 +30,10 @@ Syntax
 * `by_hostname`: expose container in dns by hostname. Default is `false`
 * `by_label`: expose container in dns by label. Default is `true`, so it is of no use. This directive is always `true`
 * `by_compose_domain`: expose container in dns by compose_domain. Default is `false`
-* `exposed_by_default`: default is `false`
+* `enabled_by_default`: default is `false`
 * `TTL`: change the DNS TTL (in seconds) of the records generated (forward and reverse). The default is 3600 seconds (1 hour).
+* `no_reverse`: disable the automatic generation of the in-addr.arpa or ip6.arpa entries for the hosts.
+* `fallthrough`: If zone matches and no record can be generated, pass request to the next plugin. If [ZONES...] is omitted, then fallthrough happens for all zones for which the plugin is authoritative. If specific zones are listed (for example in-addr.arpa and ip6.arpa), then only queries for those zones will be subject to fallthrough.
 
 #### Docker containers can have labels:
 * `"coredns.dockernet.host"` - [string] specified container hostname 
@@ -46,9 +50,10 @@ Syntax
 * if `by_compose_domain` == `true`:  
     `service.project.zone`
 
-It is recommended to define docker block in separate Corefile block
+Dockerdns plugin works with hosts, forward and other plugins as well. See config below
 
     # works incorrect 
+    # enable specific container with `enable` label  
     . {
         reload 10s
         hosts {
@@ -65,7 +70,28 @@ It is recommended to define docker block in separate Corefile block
         errors
     }
 
+    # works correct (add except directive to forward)
+    # enable specific container with `enable` label  
+    . {
+        reload 10s
+        hosts {
+            172.28.0.4  whoami.gat
+            172.28.0.4  whoami.nit
+            fallthrough
+        }
+        docker docker.loc {
+            by_domain
+            by_hostname
+            by_compose_domain
+        }
+        forward . 1.1.1.1 8.8.8.8  {
+            except docker.loc
+        }
+        errors
+    }
+
     # works correct
+    # enable specific container with `enable` label  
     loc:15353 groc:15353 {
         reload 10s
         docker {
@@ -77,9 +103,16 @@ It is recommended to define docker block in separate Corefile block
     }
 
     # works correct too
+    # all containers will be resolved with zone `moc.`
+    # by domain and hostname
+    # in that case you may expose too many containers, be cautious
     moc:15353 {
         reload 10s
-        docker 
+        docker {
+            by_domain
+            by_hostname
+            enabled_by_default
+        } 
         errors
     }
 

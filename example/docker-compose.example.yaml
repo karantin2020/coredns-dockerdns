@@ -1,0 +1,42 @@
+version: '3.8'
+name: dns-proxy
+services:
+  dns: 
+    image: alpine:3.17.3
+    container_name: dns
+    restart: always
+    ports:
+      # expose ports to use as system dns
+      # additional configuration needed
+      - 127.0.0.53:53:53/udp
+      - 127.0.0.53:53:53/tcp
+    volumes:
+      # compile coredns executable file and put it in current folder
+      - ./coredns:/coredns
+      # do not forget to add Corefile
+      - ./dns:/etc/coredns
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: "/coredns -conf /etc/coredns/Corefile"
+    networks:
+      dnsproxynet:
+        # just for example
+        ipv4_address: 172.28.0.2
+  whoami:
+    image: traefik/whoami
+    container_name: whoami
+    hostname: whoami
+    restart: always
+    labels:
+      - coredns.dockerdns.host=w.dock
+      - coredns.dockerdns.enable=true
+      - coredns.dockerdns.network=dnsproxynet
+    networks:
+      dnsproxynet:
+        # for example how to use with hosts plugin
+        ipv4_address: 172.28.0.4
+    depends_on:
+      - dns
+
+networks:
+  dnsproxynet:
+    name: dnsproxynet

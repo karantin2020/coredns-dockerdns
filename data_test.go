@@ -19,7 +19,7 @@ func setupTestDD(t *testing.T) *DockerDiscovery {
 					by_hostname
 					by_label
 					by_compose_domain
-					exposed_by_default
+					enabled_by_default
 					ttl 2400
 				}`)
 	dd, err := createPlugin(ctrlr)
@@ -77,7 +77,7 @@ func TestParseContainer(t *testing.T) {
 				project:        c.Config.Labels[dockerProjectLabel],
 				service:        c.Config.Labels[dockerServiceLabel],
 				networks:       []string{"dnsproxynet"},
-				ipv4:           []net.IP{net.ParseIP("172.28.0.4")},
+				ipv4:           []net.IP{parseIP("172.28.0.4")},
 				ipv6:           nil,
 				hosts: []string{
 					"whoami.loc.",

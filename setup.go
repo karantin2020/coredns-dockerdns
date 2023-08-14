@@ -42,7 +42,6 @@ func createPlugin(c *caddy.Controller) (*DockerDiscovery, error) {
 		if err != nil {
 			return dd, err
 		}
-		log.Debugf("[docker] Rzones: %#v", dd.rzones)
 	}
 	return dd, nil
 }
@@ -75,7 +74,8 @@ func setup(c *caddy.Controller) error {
 		return nil
 	})
 
-	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
+	conf := dnsserver.GetConfig(c)
+	conf.AddPlugin(func(next plugin.Handler) plugin.Handler {
 		dd.Next = next
 		return dd
 	})

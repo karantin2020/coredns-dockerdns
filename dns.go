@@ -29,3 +29,15 @@ func aaaa(zone string, ttl uint32, ips []net.IP) []dns.RR {
 	}
 	return answers
 }
+
+// ptr takes a slice of host names and filters out the ones that aren't in Origins, if specified, and returns a slice of PTR RRs.
+func ptr(zone string, ttl uint32, names []string) []dns.RR {
+	answers := make([]dns.RR, len(names))
+	for i, n := range names {
+		r := new(dns.PTR)
+		r.Hdr = dns.RR_Header{Name: zone, Rrtype: dns.TypePTR, Class: dns.ClassINET, Ttl: ttl}
+		r.Ptr = dns.Fqdn(n)
+		answers[i] = r
+	}
+	return answers
+}

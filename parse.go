@@ -2,8 +2,11 @@ package dockerdiscovery
 
 import (
 	"errors"
+	"fmt"
+	"net"
 	"regexp"
 	"strconv"
+	"strings"
 
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 
@@ -20,8 +23,15 @@ func ParseStanza(c *caddy.Controller) (*DockerDiscovery, error) {
 	dd := NewDockerDiscovery("")
 
 	originArgs := c.RemainingArgs()
-	log.Debugf("[docker] Found origin args: %#v", originArgs)
-	dd.Origins = plugin.OriginsFromArgsOrServerBlock(originArgs, c.ServerBlockKeys)
+	serverBlockKeys := c.ServerBlockKeys
+
+	origins, err := validOriginArgs(originArgs, serverBlockKeys)
+	if err != nil {
+		log.Errorf("[docker] Invalid origin args: %s", err)
+		return dd, err
+	}
+
+	dd.Origins = plugin.OriginsFromArgsOrServerBlock(origins, serverBlockKeys)
 
 	primaryZoneIndex := -1
 	for i, z := range dd.Origins {
@@ -39,13 +49,11 @@ func ParseStanza(c *caddy.Controller) (*DockerDiscovery, error) {
 	for c.NextBlock() {
 		log.Debug("[docker] ParseStanza next block")
 		switch c.Val() {
+		case "fallthrough":
+			dd.Fall.SetZonesFromArgs(c.RemainingArgs())
 		case "endpoint":
 			args := c.RemainingArgs()
 			if len(args) > 0 {
-				if len(args) > 1 {
-					log.Infof("[docker] DockerEndpoint is not provided, use first argument: %s",
-						args[0])
-				}
 				dd.dockerEndpoint = args[0]
 			} else {
 				return dd, c.ArgErr()
@@ -70,11 +78,11 @@ func ParseStanza(c *caddy.Controller) (*DockerDiscovery, error) {
 				return dd, c.ArgErr()
 			}
 			dd.opts.byComposeDomain = true
-		case "exposed_by_default":
+		case "enabled_by_default":
 			if c.NextArg() {
 				return dd, c.ArgErr()
 			}
-			dd.opts.exposedByDefault = true
+			dd.opts.enabledByDefault = true
 		case "ttl":
 			args := c.RemainingArgs()
 			if len(args) == 0 {
@@ -102,6 +110,11 @@ func ParseStanza(c *caddy.Controller) (*DockerDiscovery, error) {
 				return nil, c.ArgErr()
 			}
 			dd.opts.fromNetworks = networks
+		case "no_reverse":
+			if c.NextArg() {
+				return dd, c.ArgErr()
+			}
+			dd.opts.autoReverse = false
 		default:
 			return nil, c.Errf("Unknown directive '%s'", c.Val())
 		}
@@ -112,7 +125,6 @@ func ParseStanza(c *caddy.Controller) (*DockerDiscovery, error) {
 		return dd, err
 	}
 	dd.dockerClient = dockerClient
-	log.Debugf("[docker] dockerclient: %#v", dd.dockerClient)
 	if len(dd.Origins) == 0 {
 		log.Error("[docker] Error: no zones found")
 		return nil, c.ArgErr()
@@ -139,4 +151,39 @@ func validDockerNetworkName(name string) bool {
 	}
 	regex := regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9_.-]+$")
 	return regex.MatchString(name)
+}
+
+// parseIP calls discards any v6 zone info, before calling net.ParseIP.
+func parseIP(addr string) net.IP {
+	if i := strings.Index(addr, "%"); i >= 0 {
+		// discard ipv6 zone
+		addr = addr[0:i]
+	}
+
+	return net.ParseIP(addr)
+}
+
+func validOriginArgs(originArgs, serverBlockKeys []string) ([]string, error) {
+	if len(originArgs) == 0 {
+		return originArgs, nil
+	}
+	serverBlock := make([]string, len(serverBlockKeys))
+	copy(serverBlock, serverBlockKeys)
+	for i := range serverBlock {
+		serverBlock[i] = plugin.Host(serverBlock[i]).NormalizeExact()[0] // expansion of these already happened in dnsserver/register.go
+	}
+
+	origins := make([]string, 0, len(originArgs))
+	for i := range originArgs {
+		normalized := plugin.Name(originArgs[i]).Normalize()
+		zone := plugin.Zones(serverBlock).Matches(normalized)
+		if zone != "" {
+			origins = append(origins, normalized)
+		}
+	}
+	if len(originArgs) > 0 && len(origins) == 0 {
+		return origins, fmt.Errorf("origin args of docker plugin: %v, and serverBlock Keys: %v, do not match",
+			originArgs, serverBlock)
+	}
+	return origins, nil
 }

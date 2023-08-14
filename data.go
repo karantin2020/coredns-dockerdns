@@ -39,7 +39,6 @@ type ContainerData struct {
 }
 
 func newContainerConfig(container *dockerapi.Container) *ContainerData {
-	log.Debugf("[docker] Labels: %v", container.Config.Labels)
 	return &ContainerData{
 		labeledHost:    container.Config.Labels[dockerHostLabel],
 		labeledNetwork: container.Config.Labels[dockerNetworkLabel],
@@ -72,8 +71,6 @@ func (dd *DockerDiscovery) parseContainer(container *dockerapi.Container) (*Cont
 	c.ipv4 = ipv4
 	c.ipv6 = ipv6
 	dd.resolveHosts(c)
-	log.Debugf("[docker] Container %s has ipv4 %+v and hosts %+v",
-		c.id[:12], c.ipv4, c.hosts)
 	return c, nil
 }
 
@@ -92,7 +89,6 @@ func (dd *DockerDiscovery) resolveHosts(c *ContainerData) {
 		hosts := dd.makeFQDNs(domains)
 		c.hosts = hosts
 	}
-	log.Debugf("[docker] LabeledHost: %+v", c.labeledHost)
 	if c.labeledHost != "" {
 		dd.addFQDN(c.labeledHost, c)
 	}

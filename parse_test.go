@@ -27,7 +27,7 @@ func TestCreatePlugin(t *testing.T) {
 					by_hostname
 					by_label
 					by_compose_domain
-					exposed_by_default
+					enabled_by_default
 					ttl 2400
 				}`),
 			},
@@ -37,7 +37,7 @@ func TestCreatePlugin(t *testing.T) {
 					byHostname:       true,
 					byLabel:          true,
 					byComposeDomain:  true,
-					exposedByDefault: true,
+					enabledByDefault: true,
 				},
 				ttl:     2400,
 				Origins: []string{"loc."},
@@ -62,6 +62,68 @@ func TestCreatePlugin(t *testing.T) {
 				t.Errorf("createPlugin().ttl = %v, want %v", got.ttl, tt.want.ttl)
 			}
 			log.Debugf("%+v", got)
+		})
+	}
+}
+
+func Test_validOriginArgs(t *testing.T) {
+	type args struct {
+		originArgs      []string
+		serverBlockKeys []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Valid 1",
+			args: args{
+				originArgs:      []string{"dock."},
+				serverBlockKeys: []string{"dns://.:53"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Valid 2, no trailing dot",
+			args: args{
+				originArgs:      []string{"dock"},
+				serverBlockKeys: []string{"dns://.:53"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Valid 3, no trailing dot",
+			args: args{
+				originArgs:      []string{"rock s.rock"},
+				serverBlockKeys: []string{"rock."},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid 1",
+			args: args{
+				originArgs:      []string{"dock.", "s.dock."},
+				serverBlockKeys: []string{"dns://rock.:53"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid 2, no trailing dot",
+			args: args{
+				originArgs:      []string{"dock", "s.dock"},
+				serverBlockKeys: []string{"dns://rock.:53"},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := validOriginArgs(tt.args.originArgs, tt.args.serverBlockKeys)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validOriginArgs() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			log.Infof("validOriginArgs got: %v", got)
 		})
 	}
 }

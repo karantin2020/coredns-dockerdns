@@ -1,0 +1,33 @@
+. {
+    reload 10s
+    hosts {
+        172.28.0.4  whoami.gat
+        fallthrough
+    }
+    docker dock {
+        by_hostname
+    }
+    forward . 1.1.1.1 8.8.8.8 {
+        except dock
+    }
+    errors
+}
+
+loc groc {
+    reload 10s
+    docker {
+        by_domain
+        by_hostname
+        by_compose_domain
+    }
+    errors
+}
+
+rock {
+    reload 10s
+    docker rock s.rock {
+        by_hostname 
+        by_compose_domain
+    }
+    errors
+}
