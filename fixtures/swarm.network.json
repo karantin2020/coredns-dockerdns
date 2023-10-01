@@ -1,0 +1,69 @@
+[
+    {
+        "Name": "dnsproxynet",
+        "Id": "n4bvv6xqvzqxycdof0fwq2dmj",
+        "Created": "2023-08-20T04:31:44.138701192+05:00",
+        "Scope": "swarm",
+        "Driver": "overlay",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.28.0.0/24",
+                    "Gateway": "172.28.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "bc40a7d89d1433b22aad15a29ce162f4f23e38698bc182738a3fabe02eee5785": {
+                "Name": "dns-proxy_ssserver.1.xztxk9g2zokztjg0m4mn3bdf5",
+                "EndpointID": "bd763d9d01c66174c5a2f3f35697e6243e9533fd0e899a14106cf05d268eb84a",
+                "MacAddress": "02:42:ac:1c:00:03",
+                "IPv4Address": "172.28.0.3/24",
+                "IPv6Address": ""
+            },
+            "da428a09810001c7c96609c0c8e3387da6de8982fbc36841644e7061d4837151": {
+                "Name": "dns-proxy_whoami.1.asw6mjgh9joeyc1ltnz04wi31",
+                "EndpointID": "0e25dd0a59907cddba40967701b70078e016e70e98f1515f48c3276bccf60a27",
+                "MacAddress": "02:42:ac:1c:00:06",
+                "IPv4Address": "172.28.0.6/24",
+                "IPv6Address": ""
+            },
+            "ddcce6c99602c1523b2870d1485ea7f7fb19d1373bba641bfedcb90827ad4281": {
+                "Name": "dns-proxy_dns.1.ov836jvhpoj79c8xp313xxi3c",
+                "EndpointID": "0bbdc1424151dcca6a489ae16cea57c2e7f941baf45ea0529a9bd3b1245d2a7b",
+                "MacAddress": "02:42:ac:1c:00:08",
+                "IPv4Address": "172.28.0.8/24",
+                "IPv6Address": ""
+            },
+            "lb-dnsproxynet": {
+                "Name": "dnsproxynet-endpoint",
+                "EndpointID": "87c4d611f2509d12d42ffba0a1fa008af0ef94787854431c659a0d0ba570e272",
+                "MacAddress": "02:42:ac:1c:00:04",
+                "IPv4Address": "172.28.0.4/24",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {
+            "com.docker.network.driver.overlay.vxlanid_list": "4098"
+        },
+        "Labels": {
+            "com.docker.stack.namespace": "dns-proxy"
+        },
+        "Peers": [
+            {
+                "Name": "5040f3478832",
+                "IP": "127.0.0.1"
+            }
+        ]
+    }
+]

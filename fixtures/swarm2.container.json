@@ -1,0 +1,273 @@
+[
+    {
+        "Id": "ddcce6c99602c1523b2870d1485ea7f7fb19d1373bba641bfedcb90827ad4281",
+        "Created": "2023-08-19T23:31:48.434299645Z",
+        "Path": "/coredns",
+        "Args": [
+            "-conf",
+            "/etc/coredns/Corefile"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 32613,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2023-08-19T23:31:49.674748928Z",
+            "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:9ed4aefc74f6792b5a804d1d146fe4b4a2299147b0f50eaf2b08435d7b38c27e",
+        "ResolvConfPath": "/var/lib/docker/containers/ddcce6c99602c1523b2870d1485ea7f7fb19d1373bba641bfedcb90827ad4281/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/ddcce6c99602c1523b2870d1485ea7f7fb19d1373bba641bfedcb90827ad4281/hostname",
+        "HostsPath": "/var/lib/docker/containers/ddcce6c99602c1523b2870d1485ea7f7fb19d1373bba641bfedcb90827ad4281/hosts",
+        "LogPath": "/var/lib/docker/containers/ddcce6c99602c1523b2870d1485ea7f7fb19d1373bba641bfedcb90827ad4281/ddcce6c99602c1523b2870d1485ea7f7fb19d1373bba641bfedcb90827ad4281-json.log",
+        "Name": "/dns-proxy_dns.1.ov836jvhpoj79c8xp313xxi3c",
+        "RestartCount": 0,
+        "Driver": "overlay2",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "default",
+            "PortBindings": {},
+            "RestartPolicy": {
+                "Name": "",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "host",
+            "Dns": null,
+            "DnsOptions": null,
+            "DnsSearch": null,
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "default",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": null,
+            "BlkioDeviceReadBps": null,
+            "BlkioDeviceWriteBps": null,
+            "BlkioDeviceReadIOps": null,
+            "BlkioDeviceWriteIOps": null,
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": null,
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": false,
+            "PidsLimit": null,
+            "Ulimits": [],
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "Mounts": [
+                {
+                    "Type": "bind",
+                    "Source": "/home/allecs/Workspace/Docker/Composes/tests/dns-proxy/coredns",
+                    "Target": "/coredns"
+                },
+                {
+                    "Type": "bind",
+                    "Source": "/home/allecs/Workspace/Docker/Composes/tests/dns-proxy/dns",
+                    "Target": "/etc/coredns"
+                },
+                {
+                    "Type": "bind",
+                    "Source": "/var/run/docker.sock",
+                    "Target": "/var/run/docker.sock"
+                }
+            ],
+            "MaskedPaths": [
+                "/proc/asound",
+                "/proc/acpi",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "GraphDriver": {
+            "Data": {
+                "LowerDir": "/var/lib/docker/overlay2/fa3161920c153d29fe850927e08d978b1a0a181a0ee39eadf88ee8dca00d6b20-init/diff:/var/lib/docker/overlay2/d15697340673b3be0d626f980aee1471bbdcfc80a786c1e66e26573554170369/diff",
+                "MergedDir": "/var/lib/docker/overlay2/fa3161920c153d29fe850927e08d978b1a0a181a0ee39eadf88ee8dca00d6b20/merged",
+                "UpperDir": "/var/lib/docker/overlay2/fa3161920c153d29fe850927e08d978b1a0a181a0ee39eadf88ee8dca00d6b20/diff",
+                "WorkDir": "/var/lib/docker/overlay2/fa3161920c153d29fe850927e08d978b1a0a181a0ee39eadf88ee8dca00d6b20/work"
+            },
+            "Name": "overlay2"
+        },
+        "Mounts": [
+            {
+                "Type": "bind",
+                "Source": "/home/allecs/Workspace/Docker/Composes/tests/dns-proxy/dns",
+                "Destination": "/etc/coredns",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            },
+            {
+                "Type": "bind",
+                "Source": "/var/run/docker.sock",
+                "Destination": "/var/run/docker.sock",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            },
+            {
+                "Type": "bind",
+                "Source": "/home/allecs/Workspace/Docker/Composes/tests/dns-proxy/coredns",
+                "Destination": "/coredns",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            }
+        ],
+        "Config": {
+            "Hostname": "ddcce6c99602",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "/coredns",
+                "-conf",
+                "/etc/coredns/Corefile"
+            ],
+            "Image": "alpine:3.17.3@sha256:124c7d2707904eea7431fffe91522a01e5a861a624ee31d03372cc1d138a3126",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": {
+                "com.docker.stack.namespace": "dns-proxy",
+                "com.docker.swarm.node.id": "vraevemcpe3nd1l6gxhhuu1no",
+                "com.docker.swarm.service.id": "vutdov7hax489u1r25aimqx2y",
+                "com.docker.swarm.service.name": "dns-proxy_dns",
+                "com.docker.swarm.task": "",
+                "com.docker.swarm.task.id": "ov836jvhpoj79c8xp313xxi3c",
+                "com.docker.swarm.task.name": "dns-proxy_dns.1.ov836jvhpoj79c8xp313xxi3c",
+                "coredns.dockerdns.enable": "false"
+            }
+        },
+        "NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "ac9da60450f7d2cb4a8f2ffd289a749e612b91dcbdc70c3005d41eddeaaf8a54",
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "Ports": {},
+            "SandboxKey": "/var/run/docker/netns/ac9da60450f7",
+            "SecondaryIPAddresses": null,
+            "SecondaryIPv6Addresses": null,
+            "EndpointID": "",
+            "Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAddress": "",
+            "IPPrefixLen": 0,
+            "IPv6Gateway": "",
+            "MacAddress": "",
+            "Networks": {
+                "dnsproxynet": {
+                    "IPAMConfig": {
+                        "IPv4Address": "172.28.0.8"
+                    },
+                    "Links": null,
+                    "Aliases": [
+                        "ddcce6c99602"
+                    ],
+                    "NetworkID": "n4bvv6xqvzqxycdof0fwq2dmj",
+                    "EndpointID": "0bbdc1424151dcca6a489ae16cea57c2e7f941baf45ea0529a9bd3b1245d2a7b",
+                    "Gateway": "",
+                    "IPAddress": "172.28.0.8",
+                    "IPPrefixLen": 24,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "MacAddress": "02:42:ac:1c:00:08",
+                    "DriverOpts": null
+                },
+                "ingress": {
+                    "IPAMConfig": {
+                        "IPv4Address": "10.0.0.10"
+                    },
+                    "Links": null,
+                    "Aliases": [
+                        "ddcce6c99602"
+                    ],
+                    "NetworkID": "teg3ixvu6ytu2cisxt9a1ppzm",
+                    "EndpointID": "dc34656f4538379ca5fca7816b8e274128e2ee50ede8d5f56c23a76ac6c6042a",
+                    "Gateway": "",
+                    "IPAddress": "10.0.0.10",
+                    "IPPrefixLen": 24,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "MacAddress": "02:42:0a:00:00:0a",
+                    "DriverOpts": null
+                }
+            }
+        }
+    }
+]

@@ -1,0 +1,86 @@
+[
+    {
+        "ID": "i2kwqlpjzo3fe4yeu1ryjbiv3",
+        "Version": {
+            "Index": 14
+        },
+        "CreatedAt": "2023-08-19T23:14:52.347600295Z",
+        "UpdatedAt": "2023-08-19T23:14:52.348762759Z",
+        "Spec": {
+            "Name": "dns-proxy_whoami",
+            "Labels": {
+                "com.docker.stack.image": "traefik/whoami",
+                "com.docker.stack.namespace": "dns-proxy"
+            },
+            "TaskTemplate": {
+                "ContainerSpec": {
+                    "Image": "traefik/whoami:latest",
+                    "Labels": {
+                        "com.docker.stack.namespace": "dns-proxy",
+                        "coredns.dockerdns.enable": "true",
+                        "coredns.dockerdns.host": "w.dock",
+                        "coredns.dockerdns.network": "dnsproxynet"
+                    },
+                    "Hostname": "whoami",
+                    "Privileges": {
+                        "CredentialSpec": null,
+                        "SELinuxContext": null
+                    },
+                    "StopGracePeriod": 10000000000,
+                    "DNSConfig": {},
+                    "Isolation": "default"
+                },
+                "Resources": {},
+                "RestartPolicy": {
+                    "Condition": "any",
+                    "Delay": 5000000000,
+                    "MaxAttempts": 0
+                },
+                "Placement": {},
+                "Networks": [
+                    {
+                        "Target": "kp6wpkmaw3hw7w1otlypjhnkw",
+                        "Aliases": [
+                            "whoami"
+                        ]
+                    }
+                ],
+                "ForceUpdate": 0,
+                "Runtime": "container"
+            },
+            "Mode": {
+                "Replicated": {
+                    "Replicas": 1
+                }
+            },
+            "UpdateConfig": {
+                "Parallelism": 1,
+                "FailureAction": "pause",
+                "Monitor": 5000000000,
+                "MaxFailureRatio": 0,
+                "Order": "stop-first"
+            },
+            "RollbackConfig": {
+                "Parallelism": 1,
+                "FailureAction": "pause",
+                "Monitor": 5000000000,
+                "MaxFailureRatio": 0,
+                "Order": "stop-first"
+            },
+            "EndpointSpec": {
+                "Mode": "vip"
+            }
+        },
+        "Endpoint": {
+            "Spec": {
+                "Mode": "vip"
+            },
+            "VirtualIPs": [
+                {
+                    "NetworkID": "kp6wpkmaw3hw7w1otlypjhnkw",
+                    "Addr": "172.28.0.2/24"
+                }
+            ]
+        }
+    }
+]

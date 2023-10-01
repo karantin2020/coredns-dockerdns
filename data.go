@@ -27,10 +27,10 @@ type ContainerData struct {
 	name           string
 	id             string
 	hostname       string
-	labeledHost    string
-	networks       []string
-	labeledNetwork string
 	enabled        bool
+	labeledHost    string
+	labeledNetwork string
+	networks       []string
 	project        string
 	service        string
 	ipv4           []net.IP
@@ -39,13 +39,17 @@ type ContainerData struct {
 }
 
 func newContainerConfig(container *dockerapi.Container) *ContainerData {
-	return &ContainerData{
-		labeledHost:    container.Config.Labels[dockerHostLabel],
-		labeledNetwork: container.Config.Labels[dockerNetworkLabel],
-		enabled:        container.Config.Labels[dockerEnableLabel] == "true",
-		project:        container.Config.Labels[dockerProjectLabel],
-		service:        container.Config.Labels[dockerServiceLabel],
-	}
+	c := &ContainerData{}
+	extractLabels(container.Config.Labels, c)
+	return c
+}
+
+func extractLabels(labels map[string]string, c *ContainerData) {
+	c.labeledHost = labels[dockerHostLabel]
+	c.labeledNetwork = labels[dockerNetworkLabel]
+	c.enabled = labels[dockerEnableLabel] == "true"
+	c.project = labels[dockerProjectLabel]
+	c.service = labels[dockerServiceLabel]
 }
 
 func (dd *DockerDiscovery) parseContainer(container *dockerapi.Container) (*ContainerData, error) {
@@ -124,4 +128,9 @@ func (dd *DockerDiscovery) permittedNetwork(network, labeledNetwork string) bool
 		}
 	}
 	return false
+}
+
+func containerInSwarm(container *dockerapi.Container) bool {
+	return container.Config.Labels["com.docker.swarm.service.id"] != "" ||
+		container.Config.Labels["com.docker.swarm.task.id"] != ""
 }

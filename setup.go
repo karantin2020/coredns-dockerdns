@@ -56,6 +56,10 @@ func setup(c *caddy.Controller) error {
 	if err != nil {
 		return err
 	}
+	err = dd.scanServices()
+	if err != nil {
+		return err
+	}
 
 	stopChan := make(chan struct{})
 	eventChan := make(chan *dockerapi.APIEvents)

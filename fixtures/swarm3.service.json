@@ -1,0 +1,290 @@
+[
+    {
+        "ID": "vutdov7hax489u1r25aimqx2y",
+        "Version": {
+            "Index": 74
+        },
+        "CreatedAt": "2023-08-19T23:31:48.264673562Z",
+        "UpdatedAt": "2023-08-19T23:49:21.500273907Z",
+        "Spec": {
+            "Name": "dns-proxy_dns",
+            "Labels": {
+                "com.docker.stack.image": "alpine:3.17.3",
+                "com.docker.stack.namespace": "dns-proxy"
+            },
+            "TaskTemplate": {
+                "ContainerSpec": {
+                    "Image": "alpine:3.17.3@sha256:124c7d2707904eea7431fffe91522a01e5a861a624ee31d03372cc1d138a3126",
+                    "Labels": {
+                        "com.docker.stack.namespace": "dns-proxy",
+                        "coredns.dockerdns.enable": "false"
+                    },
+                    "Args": [
+                        "/coredns",
+                        "-conf",
+                        "/etc/coredns/Corefile"
+                    ],
+                    "Privileges": {
+                        "CredentialSpec": null,
+                        "SELinuxContext": null
+                    },
+                    "Mounts": [
+                        {
+                            "Type": "bind",
+                            "Source": "/home/allecs/Workspace/Docker/Composes/tests/dns-proxy/coredns",
+                            "Target": "/coredns"
+                        },
+                        {
+                            "Type": "bind",
+                            "Source": "/home/allecs/Workspace/Docker/Composes/tests/dns-proxy/dns",
+                            "Target": "/etc/coredns"
+                        },
+                        {
+                            "Type": "bind",
+                            "Source": "/var/run/docker.sock",
+                            "Target": "/var/run/docker.sock"
+                        }
+                    ],
+                    "StopGracePeriod": 10000000000,
+                    "DNSConfig": {},
+                    "Isolation": "default"
+                },
+                "Resources": {},
+                "RestartPolicy": {
+                    "Condition": "any",
+                    "Delay": 5000000000,
+                    "MaxAttempts": 0
+                },
+                "Placement": {
+                    "Platforms": [
+                        {
+                            "Architecture": "amd64",
+                            "OS": "linux"
+                        },
+                        {
+                            "OS": "linux"
+                        },
+                        {
+                            "OS": "linux"
+                        },
+                        {
+                            "Architecture": "arm64",
+                            "OS": "linux"
+                        },
+                        {
+                            "Architecture": "386",
+                            "OS": "linux"
+                        },
+                        {
+                            "Architecture": "ppc64le",
+                            "OS": "linux"
+                        },
+                        {
+                            "Architecture": "s390x",
+                            "OS": "linux"
+                        }
+                    ]
+                },
+                "Networks": [
+                    {
+                        "Target": "n4bvv6xqvzqxycdof0fwq2dmj",
+                        "Aliases": [
+                            "dns"
+                        ]
+                    }
+                ],
+                "ForceUpdate": 0,
+                "Runtime": "container"
+            },
+            "Mode": {
+                "Replicated": {
+                    "Replicas": 3
+                }
+            },
+            "UpdateConfig": {
+                "Parallelism": 1,
+                "FailureAction": "pause",
+                "Monitor": 5000000000,
+                "MaxFailureRatio": 0,
+                "Order": "stop-first"
+            },
+            "RollbackConfig": {
+                "Parallelism": 1,
+                "FailureAction": "pause",
+                "Monitor": 5000000000,
+                "MaxFailureRatio": 0,
+                "Order": "stop-first"
+            },
+            "EndpointSpec": {
+                "Mode": "vip",
+                "Ports": [
+                    {
+                        "Protocol": "udp",
+                        "TargetPort": 53,
+                        "PublishedPort": 53,
+                        "PublishMode": "ingress"
+                    },
+                    {
+                        "Protocol": "tcp",
+                        "TargetPort": 53,
+                        "PublishedPort": 53,
+                        "PublishMode": "ingress"
+                    }
+                ]
+            }
+        },
+        "PreviousSpec": {
+            "Name": "dns-proxy_dns",
+            "Labels": {
+                "com.docker.stack.image": "alpine:3.17.3",
+                "com.docker.stack.namespace": "dns-proxy"
+            },
+            "TaskTemplate": {
+                "ContainerSpec": {
+                    "Image": "alpine:3.17.3@sha256:124c7d2707904eea7431fffe91522a01e5a861a624ee31d03372cc1d138a3126",
+                    "Labels": {
+                        "com.docker.stack.namespace": "dns-proxy",
+                        "coredns.dockerdns.enable": "false"
+                    },
+                    "Args": [
+                        "/coredns",
+                        "-conf",
+                        "/etc/coredns/Corefile"
+                    ],
+                    "Privileges": {
+                        "CredentialSpec": null,
+                        "SELinuxContext": null
+                    },
+                    "Mounts": [
+                        {
+                            "Type": "bind",
+                            "Source": "/home/allecs/Workspace/Docker/Composes/tests/dns-proxy/coredns",
+                            "Target": "/coredns"
+                        },
+                        {
+                            "Type": "bind",
+                            "Source": "/home/allecs/Workspace/Docker/Composes/tests/dns-proxy/dns",
+                            "Target": "/etc/coredns"
+                        },
+                        {
+                            "Type": "bind",
+                            "Source": "/var/run/docker.sock",
+                            "Target": "/var/run/docker.sock"
+                        }
+                    ],
+                    "Isolation": "default"
+                },
+                "Resources": {},
+                "RestartPolicy": {
+                    "Condition": "any",
+                    "MaxAttempts": 0
+                },
+                "Placement": {
+                    "Platforms": [
+                        {
+                            "Architecture": "amd64",
+                            "OS": "linux"
+                        },
+                        {
+                            "OS": "linux"
+                        },
+                        {
+                            "OS": "linux"
+                        },
+                        {
+                            "Architecture": "arm64",
+                            "OS": "linux"
+                        },
+                        {
+                            "Architecture": "386",
+                            "OS": "linux"
+                        },
+                        {
+                            "Architecture": "ppc64le",
+                            "OS": "linux"
+                        },
+                        {
+                            "Architecture": "s390x",
+                            "OS": "linux"
+                        }
+                    ]
+                },
+                "Networks": [
+                    {
+                        "Target": "n4bvv6xqvzqxycdof0fwq2dmj",
+                        "Aliases": [
+                            "dns"
+                        ]
+                    }
+                ],
+                "ForceUpdate": 0,
+                "Runtime": "container"
+            },
+            "Mode": {
+                "Replicated": {
+                    "Replicas": 1
+                }
+            },
+            "EndpointSpec": {
+                "Mode": "vip",
+                "Ports": [
+                    {
+                        "Protocol": "udp",
+                        "TargetPort": 53,
+                        "PublishedPort": 53,
+                        "PublishMode": "ingress"
+                    },
+                    {
+                        "Protocol": "tcp",
+                        "TargetPort": 53,
+                        "PublishedPort": 53,
+                        "PublishMode": "ingress"
+                    }
+                ]
+            }
+        },
+        "Endpoint": {
+            "Spec": {
+                "Mode": "vip",
+                "Ports": [
+                    {
+                        "Protocol": "udp",
+                        "TargetPort": 53,
+                        "PublishedPort": 53,
+                        "PublishMode": "ingress"
+                    },
+                    {
+                        "Protocol": "tcp",
+                        "TargetPort": 53,
+                        "PublishedPort": 53,
+                        "PublishMode": "ingress"
+                    }
+                ]
+            },
+            "Ports": [
+                {
+                    "Protocol": "udp",
+                    "TargetPort": 53,
+                    "PublishedPort": 53,
+                    "PublishMode": "ingress"
+                },
+                {
+                    "Protocol": "tcp",
+                    "TargetPort": 53,
+                    "PublishedPort": 53,
+                    "PublishMode": "ingress"
+                }
+            ],
+            "VirtualIPs": [
+                {
+                    "NetworkID": "teg3ixvu6ytu2cisxt9a1ppzm",
+                    "Addr": "10.0.0.9/24"
+                },
+                {
+                    "NetworkID": "n4bvv6xqvzqxycdof0fwq2dmj",
+                    "Addr": "172.28.0.7/24"
+                }
+            ]
+        }
+    }
+]

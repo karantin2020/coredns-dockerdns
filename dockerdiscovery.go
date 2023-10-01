@@ -286,10 +286,16 @@ func addressesFromNetwork(network dockerapi.ContainerNetwork, ipv4, ipv6 *[]net.
 }
 
 func (dd *DockerDiscovery) updateContainer(container *dockerapi.Container) error {
+	if containerInSwarm(container) {
+		return nil
+	}
+
 	c, err := dd.parseContainer(container)
 	if err != nil {
-		if dd.hmap.ids.Has(c.id) {
-			dd.hmap.removeContainer(c.id)
+		if c != nil {
+			if dd.hmap.ids.Has(c.id) {
+				dd.hmap.removeContainer(c.id)
+			}
 		}
 		return err
 	}

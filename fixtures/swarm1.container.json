@@ -1,0 +1,256 @@
+[
+    {
+        "Id": "e32fce37b8b11e0d05dc6559fffd191e45409e5e858fff076581c808ccc2b811",
+        "Created": "2023-08-19T23:14:52.909353361Z",
+        "Path": "docker-entrypoint.sh",
+        "Args": [
+            "ssserver",
+            "--log-without-time",
+            "-a",
+            "nobody",
+            "-c",
+            "/etc/shadowsocks-rust/config.json"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 15997,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2023-08-19T23:14:55.11419671Z",
+            "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:21bd235c927da7dc97bbf08456d4369a0bbc3e780d74525bf4cf7387a16cb841",
+        "ResolvConfPath": "/var/lib/docker/containers/e32fce37b8b11e0d05dc6559fffd191e45409e5e858fff076581c808ccc2b811/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/e32fce37b8b11e0d05dc6559fffd191e45409e5e858fff076581c808ccc2b811/hostname",
+        "HostsPath": "/var/lib/docker/containers/e32fce37b8b11e0d05dc6559fffd191e45409e5e858fff076581c808ccc2b811/hosts",
+        "LogPath": "/var/lib/docker/containers/e32fce37b8b11e0d05dc6559fffd191e45409e5e858fff076581c808ccc2b811/e32fce37b8b11e0d05dc6559fffd191e45409e5e858fff076581c808ccc2b811-json.log",
+        "Name": "/dns-proxy_ssserver.1.i4sk1jt1ghdb12s41e581r9hi",
+        "RestartCount": 0,
+        "Driver": "overlay2",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "default",
+            "PortBindings": {},
+            "RestartPolicy": {
+                "Name": "",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "host",
+            "Dns": null,
+            "DnsOptions": null,
+            "DnsSearch": null,
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "default",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": null,
+            "BlkioDeviceReadBps": null,
+            "BlkioDeviceWriteBps": null,
+            "BlkioDeviceReadIOps": null,
+            "BlkioDeviceWriteIOps": null,
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": null,
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": false,
+            "PidsLimit": null,
+            "Ulimits": [],
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "Mounts": [
+                {
+                    "Type": "bind",
+                    "Source": "/home/allecs/Workspace/Docker/Composes/tests/dns-proxy/ssserver/config.json",
+                    "Target": "/etc/shadowsocks-rust/config.json"
+                }
+            ],
+            "MaskedPaths": [
+                "/proc/asound",
+                "/proc/acpi",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "GraphDriver": {
+            "Data": {
+                "LowerDir": "/var/lib/docker/overlay2/e34a704b1703ca40a196e48313bda46d4398dfc3b799baaf96d25e31c9d952a6-init/diff:/var/lib/docker/overlay2/7d66b176bc85d32f5f26f36ced3396f33778df4c4fa41766ac69f0373a2c198d/diff:/var/lib/docker/overlay2/d256640b25eb302b34ba0f2c23d04b3d20870e0bc2d270923d054bc0c7c1d9b4/diff:/var/lib/docker/overlay2/f8103ec72c25fe4b9ee3194cbe3e0e32ad485ab94fc93564b9dc06eb2c17c710/diff:/var/lib/docker/overlay2/2865039f791baa02349b3e5be3f0c25b1b94386451e9fda1b3ec2be05cf3b66b/diff",
+                "MergedDir": "/var/lib/docker/overlay2/e34a704b1703ca40a196e48313bda46d4398dfc3b799baaf96d25e31c9d952a6/merged",
+                "UpperDir": "/var/lib/docker/overlay2/e34a704b1703ca40a196e48313bda46d4398dfc3b799baaf96d25e31c9d952a6/diff",
+                "WorkDir": "/var/lib/docker/overlay2/e34a704b1703ca40a196e48313bda46d4398dfc3b799baaf96d25e31c9d952a6/work"
+            },
+            "Name": "overlay2"
+        },
+        "Mounts": [
+            {
+                "Type": "bind",
+                "Source": "/home/allecs/Workspace/Docker/Composes/tests/dns-proxy/ssserver/config.json",
+                "Destination": "/etc/shadowsocks-rust/config.json",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            }
+        ],
+        "Config": {
+            "Hostname": "e32fce37b8b1",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "ssserver",
+                "--log-without-time",
+                "-a",
+                "nobody",
+                "-c",
+                "/etc/shadowsocks-rust/config.json"
+            ],
+            "Image": "ghcr.io/shadowsocks/ssserver-rust:v1.15.4",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": [
+                "docker-entrypoint.sh"
+            ],
+            "OnBuild": null,
+            "Labels": {
+                "com.docker.stack.namespace": "dns-proxy",
+                "com.docker.swarm.node.id": "vraevemcpe3nd1l6gxhhuu1no",
+                "com.docker.swarm.service.id": "2n8av5xov73akwpc92p07hx4d",
+                "com.docker.swarm.service.name": "dns-proxy_ssserver",
+                "com.docker.swarm.task": "",
+                "com.docker.swarm.task.id": "i4sk1jt1ghdb12s41e581r9hi",
+                "com.docker.swarm.task.name": "dns-proxy_ssserver.1.i4sk1jt1ghdb12s41e581r9hi",
+                "coredns.dockerdns.enable": "false"
+            }
+        },
+        "NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "19816fe15cda3bc2d94d781058ff7db3ecf97ffd61e914b312d1e74630e15e3c",
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "Ports": {},
+            "SandboxKey": "/var/run/docker/netns/19816fe15cda",
+            "SecondaryIPAddresses": null,
+            "SecondaryIPv6Addresses": null,
+            "EndpointID": "",
+            "Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAddress": "",
+            "IPPrefixLen": 0,
+            "IPv6Gateway": "",
+            "MacAddress": "",
+            "Networks": {
+                "dnsproxynet": {
+                    "IPAMConfig": {
+                        "IPv4Address": "172.28.0.7"
+                    },
+                    "Links": null,
+                    "Aliases": [
+                        "e32fce37b8b1"
+                    ],
+                    "NetworkID": "kp6wpkmaw3hw7w1otlypjhnkw",
+                    "EndpointID": "28a78b8b80538638ae486dacf015453ab4704b869344f280771decb350924ce9",
+                    "Gateway": "",
+                    "IPAddress": "172.28.0.7",
+                    "IPPrefixLen": 24,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "MacAddress": "02:42:ac:1c:00:07",
+                    "DriverOpts": null
+                },
+                "ingress": {
+                    "IPAMConfig": {
+                        "IPv4Address": "10.0.0.6"
+                    },
+                    "Links": null,
+                    "Aliases": [
+                        "e32fce37b8b1"
+                    ],
+                    "NetworkID": "teg3ixvu6ytu2cisxt9a1ppzm",
+                    "EndpointID": "35e4c413380082359dd1ff19c2fbf275b404317f87c982de1b2c22282f0ae135",
+                    "Gateway": "",
+                    "IPAddress": "10.0.0.6",
+                    "IPPrefixLen": 24,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "MacAddress": "02:42:0a:00:00:06",
+                    "DriverOpts": null
+                }
+            }
+        }
+    }
+]
