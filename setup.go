@@ -1,4 +1,4 @@
-package dockerdiscovery
+package dockerdns
 
 import (
 	"github.com/coredns/coredns/core/dnsserver"
@@ -9,14 +9,21 @@ import (
 )
 
 const (
+	defaultDockerDomain   = "loc."
 	defaultDockerEndpoint = "unix:///var/run/docker.sock"
-	defaultDockerDomain   = "loc"
 	defaultTTL            = 3600
 	dockerHostLabel       = "coredns.dockerdns.host"
-	dockerNetworkLabel    = "coredns.dockerdns.network"
 	dockerEnableLabel     = "coredns.dockerdns.enable"
-	dockerProjectLabel    = "com.docker.compose.project"
-	dockerServiceLabel    = "com.docker.compose.service"
+
+	dockerIdentityLabel = "coredns.dockerdns.server"
+
+	dockerProjectLabel = "com.docker.compose.project"
+	dockerServiceLabel = "com.docker.compose.service"
+
+	dockerEnvEndpoint   = "COREDNS_DOCKER_ENDPOINT"
+	dockerEnvAutoEnable = "COREDNS_DOCKER_AUTOENABLE"
+	dockerEnvNetworks   = "COREDNS_DOCKER_NETWORKS"
+	dockerEnvTTL        = "COREDNS_DOCKER_TTL"
 )
 
 func init() {

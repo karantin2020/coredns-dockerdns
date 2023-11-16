@@ -1,4 +1,4 @@
-package dockerdiscovery
+package dockerdns
 
 import (
 	"encoding/json"
@@ -68,17 +68,16 @@ func TestParseContainer(t *testing.T) {
 				container: c,
 			},
 			want: &ContainerData{
-				name:           c.Name[1:],
-				id:             c.ID,
-				hostname:       c.Config.Hostname,
-				labeledHost:    c.Config.Labels[dockerHostLabel],
-				labeledNetwork: c.Config.Labels[dockerNetworkLabel],
-				enabled:        c.Config.Labels[dockerEnableLabel] == "true",
-				project:        c.Config.Labels[dockerProjectLabel],
-				service:        c.Config.Labels[dockerServiceLabel],
-				networks:       []string{"dnsproxynet"},
-				ipv4:           []net.IP{parseIP("172.28.0.4")},
-				ipv6:           nil,
+				name:        c.Name[1:],
+				id:          c.ID,
+				hostname:    c.Config.Hostname,
+				labeledHost: c.Config.Labels[dockerHostLabel],
+				enabled:     c.Config.Labels[dockerEnableLabel] == "true",
+				project:     c.Config.Labels[dockerProjectLabel],
+				service:     c.Config.Labels[dockerServiceLabel],
+				networks:    []string{"dnsproxynet"},
+				ipv4:        []net.IP{parseIP("172.28.0.4")},
+				ipv6:        nil,
 				hosts: []string{
 					"whoami.loc.",
 					"whoami.dns-proxy.loc.",

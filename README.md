@@ -19,7 +19,7 @@ Syntax
         by_compose_domain
         enabled_by_default
         ttl TTL
-        from_networks NETWORKS...
+        networks NETWORKS...
         no_reverse
         fallthrough [ZONES...]
     }
@@ -32,13 +32,16 @@ Syntax
 * `by_compose_domain`: expose container in dns by compose_domain. Default is `false`
 * `enabled_by_default`: default is `false`
 * `TTL`: change the DNS TTL (in seconds) of the records generated (forward and reverse). The default is 3600 seconds (1 hour).
+* `networks`: filter list of networks for dns resolver to apply
 * `no_reverse`: disable the automatic generation of the in-addr.arpa or ip6.arpa entries for the hosts.
 * `fallthrough`: If zone matches and no record can be generated, pass request to the next plugin. If [ZONES...] is omitted, then fallthrough happens for all zones for which the plugin is authoritative. If specific zones are listed (for example in-addr.arpa and ip6.arpa), then only queries for those zones will be subject to fallthrough.
 
-#### Docker containers can have labels:
-* `"coredns.dockernet.host"` - [string] specified container hostname 
-* `"coredns.dockernet.network"` - [string] container network to apply. This parameter overwrites `from_networks` rule. BE CAUTIOUS!
-* `"coredns.dockernet.enable"` - [true|false] enable specific container
+#### COREDNS docker container may have env variables:
+* `COREDNS_DOCKER_ENDPOINT`
+* `COREDNS_DOCKER_NETWORKS`
+* `COREDNS_DOCKER_AUTOENABLE`
+* `COREDNS_DOCKER_TTL`
+This variables are equivalent to config variables. All env variables overwrite config values
 
 #### Apply next host resolve rules:
 * if `by_domain` == `true`:  
@@ -46,29 +49,11 @@ Syntax
 * if `by_hostname` == `true`:  
     `hostname.zone`
 * if `by_label` == `true`:  
-    `host` (from label value, must have the same zone as plugin)
+    `label value` (must have the same zone as plugin)
 * if `by_compose_domain` == `true`:  
     `service.project.zone`
 
-Dockerdns plugin works with hosts, forward and other plugins as well. See config below
-
-    # works incorrect 
-    # enable specific container with `enable` label  
-    . {
-        reload 10s
-        hosts {
-            172.28.0.4  whoami.gat
-            172.28.0.4  whoami.nit
-            fallthrough
-        }
-        docker docker.loc {
-            by_domain
-            by_hostname
-            by_compose_domain
-        }
-        forward . 1.1.1.1 8.8.8.8
-        errors
-    }
+Dockerdns plugin works with hosts, forward and other plugins as well. See configs below
 
     # works correct (add except directive to forward)
     # enable specific container with `enable` label  

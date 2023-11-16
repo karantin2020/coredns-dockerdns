@@ -1,0 +1,37 @@
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+)
+
+func main() {
+	// Get the current process ID
+	pid := os.Getpid()
+
+	// Get the symbolic link path to the current process's /proc directory
+	procPath := fmt.Sprintf("/proc/%d", pid)
+
+	// Get the container ID from the symbolic link
+	containerID, err := getContainerID(procPath)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Container ID:", containerID)
+}
+
+func getContainerID(procPath string) (string, error) {
+	// Get the symbolic link target path
+	linkPath, err := filepath.EvalSymlinks(procPath + "/ns/net")
+	if err != nil {
+		return "", err
+	}
+
+	// Extract the container ID from the symbolic link target path
+	containerID := filepath.Base(filepath.Dir(linkPath))
+
+	return containerID, nil
+}

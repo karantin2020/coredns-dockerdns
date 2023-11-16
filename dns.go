@@ -1,4 +1,4 @@
-package dockerdiscovery
+package dockerdns
 
 import (
 	"net"

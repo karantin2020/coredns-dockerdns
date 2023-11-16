@@ -1,9 +1,10 @@
-package dockerdiscovery
+package dockerdns
 
 import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -33,6 +34,11 @@ func ParseStanza(c *caddy.Controller) (*DockerDiscovery, error) {
 
 	dd.Origins = plugin.OriginsFromArgsOrServerBlock(origins, serverBlockKeys)
 
+	if len(dd.Origins) == 0 {
+		log.Error("[docker] Error: no zones found")
+		return dd, c.ArgErr()
+	}
+
 	primaryZoneIndex := -1
 	for i, z := range dd.Origins {
 		if dnsutil.IsReverse(z) > 0 {
@@ -54,7 +60,7 @@ func ParseStanza(c *caddy.Controller) (*DockerDiscovery, error) {
 		case "endpoint":
 			args := c.RemainingArgs()
 			if len(args) > 0 {
-				dd.dockerEndpoint = args[0]
+				dd.opts.dockerEndpoint = args[0]
 			} else {
 				return dd, c.ArgErr()
 			}
@@ -88,15 +94,20 @@ func ParseStanza(c *caddy.Controller) (*DockerDiscovery, error) {
 			if len(args) == 0 {
 				return nil, c.ArgErr()
 			}
-			t, err := strconv.Atoi(args[0])
+			ttlStr := args[0]
+			value, ok := os.LookupEnv(dockerEnvTTL)
+			if ok && value != "" {
+				ttlStr = value
+			}
+			t, err := strconv.Atoi(ttlStr)
 			if err != nil {
 				return nil, err
 			}
 			if t < 0 || t > 3600 {
 				return nil, c.Errf("ttl must be in range [0, 3600]: %d", t)
 			}
-			dd.ttl = uint32(t)
-		case "from_networks":
+			dd.opts.ttl = uint32(t)
+		case "networks":
 			networks := []string{}
 			for c.NextArg() {
 				name := c.Val()
@@ -106,6 +117,7 @@ func ParseStanza(c *caddy.Controller) (*DockerDiscovery, error) {
 					log.Errorf("[docker] Invalid network name: %s", name)
 				}
 			}
+
 			if len(networks) == 0 {
 				return nil, c.ArgErr()
 			}
@@ -119,16 +131,61 @@ func ParseStanza(c *caddy.Controller) (*DockerDiscovery, error) {
 			return nil, c.Errf("Unknown directive '%s'", c.Val())
 		}
 	}
-	dockerClient, err := dockerapi.NewClient(dd.dockerEndpoint)
+	endpointVal, ok := os.LookupEnv(dockerEnvEndpoint)
+	if ok && endpointVal != "" {
+		dd.opts.dockerEndpoint = endpointVal
+	}
+	autoEnableVal, ok := os.LookupEnv(dockerEnvAutoEnable)
+	if ok && autoEnableVal != "" {
+		boolVal, err := strconv.ParseBool(autoEnableVal)
+		if err != nil || !boolVal {
+			dd.opts.enabledByDefault = false
+		} else {
+			dd.opts.enabledByDefault = true
+		}
+	}
+	ttlVal, ok := os.LookupEnv(dockerEnvTTL)
+	if ok && ttlVal != "" {
+		t, err := strconv.Atoi(ttlVal)
+		if err != nil {
+			return nil, err
+		}
+		if t < 0 || t > 3600 {
+			return nil, c.Errf("ttl must be in range [0, 3600]: %d", t)
+		}
+		dd.opts.ttl = uint32(t)
+	}
+	networkVal, ok := os.LookupEnv(dockerEnvNetworks)
+	if ok && networkVal != "" {
+		networks := []string{}
+		tNetworks := strings.Split(networkVal, ",")
+		for _, name := range tNetworks {
+			if validDockerNetworkName(name) {
+				networks = append(networks, name)
+			} else {
+				log.Errorf("[docker] Invalid network name: %s", name)
+			}
+		}
+		if len(networks) == 0 {
+			return nil, c.Errf("networks must not be empty or invalid")
+		}
+		dd.opts.fromNetworks = networks
+	}
+
+	dockerClient, err := dockerapi.NewClient(dd.opts.dockerEndpoint)
 	if err != nil || dockerClient == nil {
 		log.Errorf("[docker] create docker client: %s", err)
 		return dd, err
 	}
 	dd.dockerClient = dockerClient
-	if len(dd.Origins) == 0 {
-		log.Error("[docker] Error: no zones found")
-		return nil, c.ArgErr()
+
+	if len(dd.opts.fromNetworks) == 0 {
+		nets, err := dd.findOwnNetworks()
+		if err == nil {
+			dd.opts.fromNetworks = nets
+		}
 	}
+
 	dd.addRZones()
 
 	return dd, nil
@@ -181,9 +238,34 @@ func validOriginArgs(originArgs, serverBlockKeys []string) ([]string, error) {
 			origins = append(origins, normalized)
 		}
 	}
-	if len(originArgs) > 0 && len(origins) == 0 {
+	if len(serverBlock) == 0 && len(origins) == 0 {
 		return origins, fmt.Errorf("origin args of docker plugin: %v, and serverBlock Keys: %v, do not match",
 			originArgs, serverBlock)
 	}
 	return origins, nil
+}
+
+func (dd *DockerDiscovery) findOwnNetworks() ([]string, error) {
+	containers, err := dd.dockerClient.ListContainers(dockerapi.ListContainersOptions{
+		Filters: map[string][]string{
+			"label": {dockerIdentityLabel},
+		},
+	})
+	if err != nil {
+		log.Errorf("[docker] listContainers: %s", err)
+		return nil, err
+	}
+	networks := make([]string, 0, 4)
+	for _, apiContainer := range containers {
+		container, err := dd.dockerClient.InspectContainerWithOptions(dockerapi.InspectContainerOptions{ID: apiContainer.ID})
+		if err != nil {
+			log.Errorf("[docker] inspect container %s: %s", container.ID[:12], err)
+			return nil, err
+		}
+		for name := range container.NetworkSettings.Networks {
+			networks = append(networks, name)
+		}
+	}
+
+	return networks, nil
 }

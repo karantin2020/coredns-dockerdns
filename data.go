@@ -1,8 +1,9 @@
-package dockerdiscovery
+package dockerdns
 
 import (
 	"fmt"
 	"net"
+	"strconv"
 
 	dockerapi "github.com/fsouza/go-dockerclient"
 )
@@ -17,34 +18,45 @@ import (
 
 var labels = []string{
 	dockerHostLabel,
-	dockerNetworkLabel,
 	dockerEnableLabel,
 	dockerProjectLabel,
 	dockerServiceLabel,
 }
 
 type ContainerData struct {
-	name           string
-	id             string
-	hostname       string
-	labeledHost    string
-	networks       []string
-	labeledNetwork string
-	enabled        bool
-	project        string
-	service        string
-	ipv4           []net.IP
-	ipv6           []net.IP
-	hosts          []string
+	name        string
+	id          string
+	hostname    string
+	labeledHost string
+	networks    []string
+	// labeledNetwork string
+	enabled       bool
+	forceDisabled bool
+	project       string
+	service       string
+	ipv4          []net.IP
+	ipv6          []net.IP
+	hosts         []string
 }
 
 func newContainerConfig(container *dockerapi.Container) *ContainerData {
+	disabled := false
+	enabled := false
+	var err error
+	val, ok := container.Config.Labels[dockerEnableLabel]
+	if ok {
+		enabled, err = strconv.ParseBool(val)
+		if err == nil && !enabled {
+			disabled = true
+		}
+	}
+
 	return &ContainerData{
-		labeledHost:    container.Config.Labels[dockerHostLabel],
-		labeledNetwork: container.Config.Labels[dockerNetworkLabel],
-		enabled:        container.Config.Labels[dockerEnableLabel] == "true",
-		project:        container.Config.Labels[dockerProjectLabel],
-		service:        container.Config.Labels[dockerServiceLabel],
+		labeledHost:   container.Config.Labels[dockerHostLabel],
+		enabled:       enabled,
+		forceDisabled: disabled,
+		project:       container.Config.Labels[dockerProjectLabel],
+		service:       container.Config.Labels[dockerServiceLabel],
 	}
 }
 
@@ -52,7 +64,7 @@ func (dd *DockerDiscovery) parseContainer(container *dockerapi.Container) (*Cont
 	c := newContainerConfig(container)
 	networks := []string{}
 	for name := range container.NetworkSettings.Networks {
-		if !dd.permittedNetwork(name, c.labeledNetwork) {
+		if !dd.permittedNetwork(name) {
 			continue
 		}
 		networks = append(networks, name)
@@ -65,8 +77,8 @@ func (dd *DockerDiscovery) parseContainer(container *dockerapi.Container) (*Cont
 	if err != nil {
 		return c, err
 	}
-	if len(ipv4) == 0 {
-		return c, fmt.Errorf("No ipv4 address for container %s found", container.ID[:12])
+	if len(ipv4) == 0 && len(ipv6) == 0 {
+		return c, nil
 	}
 	c.ipv4 = ipv4
 	c.ipv6 = ipv6
@@ -114,12 +126,12 @@ func (dd *DockerDiscovery) addFQDN(name string, c *ContainerData) error {
 	return nil
 }
 
-func (dd *DockerDiscovery) permittedNetwork(network, labeledNetwork string) bool {
+func (dd *DockerDiscovery) permittedNetwork(network string) bool {
 	if len(dd.opts.fromNetworks) == 0 {
 		return true
 	}
 	for _, n := range dd.opts.fromNetworks {
-		if n == network || (labeledNetwork != "" && n == labeledNetwork) {
+		if n == network {
 			return true
 		}
 	}
